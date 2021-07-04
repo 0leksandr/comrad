@@ -1,0 +1,45 @@
+.comment
+  border: 1px solid black
+  display: none
+
+//$node-size: 100px
+.node
+  //width: $node-size
+  //height: $node-size
+  //border-radius: $node-size / 2
+  position: absolute
+  border: 1px solid black
+
+.root
+  border: 1px solid red
+
+.comment-holder
+  width: 100%
+  height: 100%
+  //border: 1px solid black
+
+.comment-holder:hover > .comment
+  display: block
+
+.tree
+  position: absolute
+  top: 400px
+  left: 500px
+  border: 1px solid green
+  width: 150px
+  height: 150px
+
+.connector
+  z-index: -1
+
+svg.connector
+  position: absolute
+
+  line
+    position: absolute
+
+.movable
+  width: 100px
+  height: 100px
+  border: 1px solid red
+  position: absolute

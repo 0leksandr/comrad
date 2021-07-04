@@ -1,26 +1,41 @@
 import React from 'react';
-import logo from './logo.svg';
 import './App.css';
+import './App.sass';
+import {Comment} from "./Comment";
+import {TemplateComment, TemplateRoot} from "./Template";
+import {ReactElement} from "react";
+import {ComRadFC} from "./ComRad";
 
-function App() {
-  return (
-    <div className="App">
-      <header className="App-header">
-        <img src={logo} className="App-logo" alt="logo" />
-        <p>
-          Edit <code>src/App.tsx</code> and save to reload.
-        </p>
-        <a
-          className="App-link"
-          href="https://reactjs.org"
-          target="_blank"
-          rel="noopener noreferrer"
-        >
-          Learn React
-        </a>
-      </header>
-    </div>
-  );
+function App(): ReactElement {
+    // console.clear()
+
+    let id = 0
+    const c = (children: TemplateComment[] = []) => {
+        return new TemplateComment(
+            new Comment('[author]', new Date(), 1, `comment ${++id}`),
+            children
+        )
+    }
+
+    const root = new TemplateRoot(
+        '[root]',
+        [
+            c([c(), c()]),
+            c([c(), c()]),
+            c([c(), c(), c()]),
+
+            // c([
+            //     c(),
+            //     c([
+            //         c([c(), c(), c()]),
+            //         c([c(), c()]),
+            //     ]),
+            // ]),
+        ]
+    )
+    return (
+        <ComRadFC comments={root.asComments()} originalTree={root.asTree()}/>
+    )
 }
 
 export default App;
