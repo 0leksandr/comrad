@@ -1,3 +1,5 @@
+import {ReactElement} from "react";
+
 export type Int = BigInt
 
 export class Position {
@@ -21,4 +23,8 @@ export class Position {
     moveDiagonal(nr: number): Position {
         return new Position(this.x + nr, this.y - nr)
     }
+}
+
+export abstract class Element {
+    abstract render(): ReactElement;
 }

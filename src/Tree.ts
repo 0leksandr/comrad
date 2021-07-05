@@ -1,15 +1,15 @@
 import {Position} from "./General";
-import {AbstractComment} from "./Comment";
+import {Comment} from "./Comment/Comment";
 import {Link} from "./Connector";
 
 export class NodePayload { // TODO: rename
     constructor(
-        public readonly comment: AbstractComment,
+        public readonly comment: Comment,
         public readonly commentLevel: number
     ) {}
 
     is(other: NodePayload): boolean {
-        return this.comment.id() === other.comment.id()
+        return this.comment.id === other.comment.id
     }
 }
 
@@ -154,7 +154,8 @@ export class Leave extends Node { // TODO: cache
             const nrFreeChildren = p.children.length - 1
             const nrLeft = nrFreeChildren / 2
             const nrRight = nrFreeChildren - nrLeft
-            if (childPosition <= nrLeft) {
+console.log(this.childPosition, trunkPosition, childPosition, p.children.length, nrLeft, nrRight)
+            if (childPosition < nrLeft) {
                 return p.angle() - pSecSize + pSecSize * childPosition / nrLeft
             } else {
                 return p.angle() + pSecSize * childPosition / nrRight
@@ -183,7 +184,7 @@ export class Tree {
     constructor(root: Root) {
         this.links = root.links()
         root.walk((node: Node): void => {
-            this.nodes[node.payload.comment.id()] = node
+            this.nodes[node.payload.comment.id] = node
         })
     }
 }

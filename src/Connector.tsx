@@ -1,6 +1,5 @@
 import React from "react";
-import {Element} from "./Element";
-import {Position} from "./General";
+import {Element, Position} from "./General";
 import {Node} from "./Tree";
 
 export class Link {
@@ -33,7 +32,7 @@ export class LineConnector extends Connector {
         const lineTo = to.subPosition(topLeft)
         return (
             <svg className="connector radial-connector"
-                 key={`connector-${this.link.child.payload.comment.id()}`}
+                 key={`connector-${this.link.child.payload.comment.id}`}
                  width={Math.abs(from.x - to.x) + this.thickness}
                  height={Math.abs(from.y - to.y) + this.thickness}
                  style={topLeft.asStyle()}

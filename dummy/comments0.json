@@ -1,0 +1,46 @@
+[
+  {
+    "author": "author 1",
+    "date": "2021-01-01 00:00:01",
+    "rating": 1,
+    "text": "comment 1",
+    "children": [
+      {
+        "author": "author 2",
+        "date": "2021-01-01 00:00:02",
+        "rating": -1,
+        "text": "comment 2",
+        "children": []
+      },
+      {
+        "author": "author 3",
+        "date": "2021-01-01 00:00:03",
+        "rating": 2,
+        "text": "comment 3",
+        "children": []
+      }
+    ]
+  },
+  {
+    "author": "author 4",
+    "date": "2021-01-01 00:00:04",
+    "rating": 3,
+    "text": "comment 4",
+    "children": [
+      {
+        "author": "author 5",
+        "date": "2021-01-01 00:00:05",
+        "rating": -2,
+        "text": "comment 5",
+        "children": []
+      },
+      {
+        "author": "author 6",
+        "date": "2021-01-01 00:00:06",
+        "rating": 1,
+        "text": "comment 6",
+        "children": []
+      }
+    ]
+  }
+]

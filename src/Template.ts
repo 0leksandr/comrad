@@ -1,8 +1,9 @@
-import {AbstractComment, Article, CommentsRepo} from "./Comment";
+import {Comment, CommentsRepo} from "./Comment/Comment";
 import {Node, NodePayload, Root, Tree} from "./Tree";
+import {DummyArticle} from "./Comment/DummyComment";
 
-abstract class TemplateNode {
-    constructor(public readonly comment: AbstractComment, protected readonly children: TemplateComment[]) {}
+export class TemplateComment {
+    constructor(public readonly comment: Comment, protected readonly children: TemplateComment[]) {}
 
     protected grow(node: Node, level: number): void {
         this.children.forEach((child, index) => {
@@ -11,15 +12,15 @@ abstract class TemplateNode {
         })
     }
 
-    protected walk(fn: (node: TemplateNode) => void): void {
+    protected walk(fn: (node: TemplateComment) => void): void {
         fn(this)
         this.children.forEach(child => { child.walk(fn) })
     }
 }
 
-export class TemplateRoot extends TemplateNode {
+export class TemplateRoot extends TemplateComment {
     constructor(private title: string, children: TemplateComment[]) {
-        super(new Article(title), children);
+        super(new DummyArticle(title), children); // TODO: normal article
     }
 
     asTree(): Tree {
@@ -29,12 +30,10 @@ export class TemplateRoot extends TemplateNode {
     }
 
     asComments(): CommentsRepo {
-        const comments: AbstractComment[] = []
-        this.walk((node: TemplateNode) => {
+        const comments: Comment[] = []
+        this.walk((node: TemplateComment) => {
             comments.push(node.comment)
         })
         return new CommentsRepo(comments)
     }
 }
-
-export class TemplateComment extends TemplateNode {}
