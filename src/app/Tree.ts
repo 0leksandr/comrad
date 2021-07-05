@@ -1,5 +1,5 @@
 import {Position} from "./General";
-import {Comment} from "./Comment/Comment";
+import {Comment} from "./Comment";
 import {Link} from "./Connector";
 
 export class NodePayload { // TODO: rename

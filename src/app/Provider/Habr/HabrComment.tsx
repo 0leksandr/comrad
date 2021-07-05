@@ -1,4 +1,4 @@
-import {Comment, IdGenerator} from "../Comment/Comment";
+import {Comment, IdGenerator} from "../../Comment";
 import React from "react";
 
 export class HabrComment extends Comment {

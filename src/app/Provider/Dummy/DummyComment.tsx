@@ -1,5 +1,5 @@
 import React, {ReactElement} from "react";
-import {Comment, IdGenerator} from "./Comment";
+import {Comment, IdGenerator} from "../../Comment";
 
 export class DummyComment extends Comment {
     constructor(

@@ -1,10 +1,11 @@
-import {TemplateComment, TemplateRoot} from "../Template";
+import {TemplateComment, TemplateRoot} from "../../Template";
 import {HabrComment} from "./HabrComment";
+import {DummyArticle} from "../Dummy/DummyComment";
 
 export class HabrParser {
     parseElement(title: string, html: HTMLElement): TemplateRoot {
         return new TemplateRoot(
-            title,
+            new DummyArticle(title), // TODO: normal article
             this.parseMany(HabrParser.select(html, "ul#comments-list"))
         )
     }

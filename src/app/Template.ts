@@ -1,6 +1,5 @@
-import {Comment, CommentsRepo} from "./Comment/Comment";
+import {Comment, CommentsRepo} from "./Comment";
 import {Node, NodePayload, Root, Tree} from "./Tree";
-import {DummyArticle} from "./Comment/DummyComment";
 
 export class TemplateComment {
     constructor(public readonly comment: Comment, protected readonly children: TemplateComment[]) {}
@@ -19,10 +18,6 @@ export class TemplateComment {
 }
 
 export class TemplateRoot extends TemplateComment {
-    constructor(private title: string, children: TemplateComment[]) {
-        super(new DummyArticle(title), children); // TODO: normal article
-    }
-
     asTree(): Tree {
         const root = new Root(new NodePayload(this.comment, 0), .5)
         this.grow(root, 0)

@@ -1,4 +1,4 @@
-import {Element} from "../General"
+import {Element} from "./General"
 import {ReactElement} from "react";
 
 export abstract class Comment extends Element { // TODO: rename

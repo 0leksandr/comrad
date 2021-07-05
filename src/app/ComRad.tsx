@@ -1,5 +1,5 @@
 import React, {FC, useState} from "react";
-import {CommentsRepo} from "./Comment/Comment";
+import {CommentsRepo} from "./Comment";
 import {Tree} from "./Tree";
 import {LineConnector} from "./Connector";
 import {motion} from "framer-motion";
