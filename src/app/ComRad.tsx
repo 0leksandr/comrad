@@ -23,7 +23,7 @@ export const ComRadFC: FC<ComRadProps> = ({originalTree}) => {
                                 key={comment.id}
                                 style={node.style()}
                                 animate={node.absolutePosition().asStyle()}
-                                onClick={() => { setTree(node.asTree()) }}
+                                onClick={() => { if (!node.isRoot()) setTree(node.asTree()) }}
                     >
                         <div className="comment-holder">
                             <div className="comment">

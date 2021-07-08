@@ -64,7 +64,8 @@ export abstract class Node {
     }
 
     asTree(): Tree {
-        const root = new Root(this.payload, this.angle() - .5)
+        const angle = this.payload.isRoot() ? this.angle() : (this.angle() - .5);
+        const root = new Root(this.payload, angle)
         this.neighbours().forEach(neighbour => {
             neighbour.joinTo(root)
         })
