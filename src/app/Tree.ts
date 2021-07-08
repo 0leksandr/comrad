@@ -119,11 +119,11 @@ export class Root extends Node {
 }
 
 export class Leave extends Node { // TODO: cache
-    private readonly childPosition: number
+    private readonly childIndex: number
 
     constructor(private readonly parent: Node, payload: NodePayload) {
         super(payload)
-        this.childPosition = parent.children.length
+        this.childIndex = parent.children.length
     }
 
     sectorSize(): number {
@@ -166,29 +166,29 @@ export class Leave extends Node { // TODO: cache
 
     protected childOf(): ChildOf {
         const p = this.parent;
-        const getBastardPosition = (): number => {
-            let bastardPosition = this.childPosition
-            let trunkPosition = null
+        const getBastardIndex = (): number => {
+            let bastardIndex = this.childIndex
+            let trunkIndex = null
             for (const key in p.children) {
-                if (p.children[key].isTrunk()) trunkPosition = parseInt(key)
+                if (p.children[key].isTrunk()) trunkIndex = parseInt(key)
             }
-            if (trunkPosition === null) throw new Error("Logic error")
-            if (trunkPosition < bastardPosition) --bastardPosition
-            return bastardPosition
+            if (trunkIndex === null) throw new Error("Logic error")
+            if (trunkIndex < bastardIndex) --bastardIndex
+            return bastardIndex
         }
         if (p.isRoot() && p.payload.isRoot()) {
-            return new ChildOfCenter(this.childPosition, this.parent)
+            return new ChildOfCenter(this.childIndex, this.parent)
         } else if (p.isRoot()) {
-            return new ChildOfRootNode(getBastardPosition(), this.parent)
+            return new ChildOfRootNode(getBastardIndex(), this.parent)
         } else if (p.payload.isRoot()) {
-            return new ChildOfRootArticle(this.childPosition, this.parent)
+            return new ChildOfRootArticle(this.childIndex, this.parent)
         } else if (p.isTrunk()) {
-            const bastardPosition = getBastardPosition()
-            return bastardPosition < (p.children.length - 1) / 2
-                ? new LeftChildOfTrunk(bastardPosition, this.parent)
-                : new RightChildOfTrunk(bastardPosition, this.parent)
+            const bastardIndex = getBastardIndex()
+            return bastardIndex < (p.children.length - 1) / 2
+                ? new LeftChildOfTrunk(bastardIndex, this.parent)
+                : new RightChildOfTrunk(bastardIndex, this.parent)
         } else {
-            return new NormalChild(this.childPosition, this.parent)
+            return new NormalChild(this.childIndex, this.parent)
         }
     }
 }
@@ -225,12 +225,12 @@ export class Leave extends Node { // TODO: cache
 // }
 
 abstract class ChildOf {
-    constructor(protected readonly bastardPosition: number, protected readonly parent: Node) {}
+    constructor(protected readonly bastardIndex: number, protected readonly parent: Node) {}
 
     angle(): number {
         if (this.nrBastards() === 1) return this.parent.angle()
         const pSecSize = this.parent.sectorSize()
-        return this.parent.angle() - pSecSize / 2 + pSecSize * this.bastardPosition / (this.nrBastards() - 1)
+        return this.parent.angle() - pSecSize / 2 + pSecSize * this.bastardIndex / (this.nrBastards() - 1)
     }
 
     protected nrBastards(): number {
