@@ -1,4 +1,4 @@
-import {Comment, CommentsRepo} from "./Comment";
+import {Comment} from "./Comment";
 import {Node, NodePayload, Root, Tree} from "./Tree";
 
 export class TemplateComment {
@@ -22,13 +22,5 @@ export class TemplateRoot extends TemplateComment {
         const root = new Root(new NodePayload(this.comment, 0), .5)
         this.grow(root, 0)
         return new Tree(root)
-    }
-
-    asComments(): CommentsRepo {
-        const comments: Comment[] = []
-        this.walk((node: TemplateComment) => {
-            comments.push(node.comment)
-        })
-        return new CommentsRepo(comments)
     }
 }

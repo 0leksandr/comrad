@@ -1,15 +1,13 @@
 import React, {FC, useState} from "react";
-import {CommentsRepo} from "./Comment";
 import {Tree} from "./Tree";
 import {LineConnector} from "./Connector";
 import {motion} from "framer-motion";
 
 interface ComRadProps {
-    comments: CommentsRepo
     originalTree: Tree
 }
 
-export const ComRadFC: FC<ComRadProps> = ({comments, originalTree}) => {
+export const ComRadFC: FC<ComRadProps> = ({originalTree}) => {
     const [tree, setTree] = useState(originalTree)
 
     return (
@@ -17,8 +15,8 @@ export const ComRadFC: FC<ComRadProps> = ({comments, originalTree}) => {
             {tree.links.map(link => {
                 return new LineConnector(link).render()
             })}
-            {comments.all().map(comment => {
-                const node = tree.nodes[comment.id];
+            {tree.nodes.map(node => {
+                const comment = node.payload.comment
 
                 return (
                     <motion.div className="node"

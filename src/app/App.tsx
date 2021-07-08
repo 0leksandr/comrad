@@ -1,5 +1,4 @@
 import React, {useEffect, useState} from 'react';
-import '../App.css';
 import '../App.sass';
 import {TemplateComment, TemplateRoot} from "./Template";
 import {ReactElement} from "react";
@@ -48,7 +47,7 @@ function App(): ReactElement {
     // )
     return (
         <>
-            {root ? <ComRadFC comments={root.asComments()} originalTree={root.asTree()}/> : '[x]'}
+            {root ? <ComRadFC originalTree={root.asTree()}/> : '[x]'}
         </>
     )
 }
