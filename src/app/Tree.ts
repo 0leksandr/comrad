@@ -21,7 +21,7 @@ export abstract class Node {
     private readonly diameter = 100
     children: Leave[] = []
 
-    protected constructor(public readonly payload: NodePayload, public readonly level: number) {}
+    protected constructor(public readonly payload: NodePayload) {}
 
     abstract sectorSize(): number
 
@@ -89,7 +89,7 @@ export abstract class Node {
 
 export class Root extends Node {
     constructor(payload: NodePayload, private readonly _angle: number) {
-        super(payload, 0);
+        super(payload)
     }
     
     sectorSize(): number {
@@ -121,7 +121,7 @@ export class Leave extends Node { // TODO: cache
     private readonly childPosition: number
 
     constructor(private readonly parent: Node, payload: NodePayload) {
-        super(payload, parent.level + 1)
+        super(payload)
         this.childPosition = parent.children.length
     }
 
