@@ -3,8 +3,8 @@ import '../App.sass';
 import {TemplateComment, TemplateRoot} from "./Template";
 import {ReactElement} from "react";
 import {ComRadFC} from "./ComRad";
-import {DummyArticle, DummyComment} from "./Provider/Dummy/DummyComment";
-import {HabrParser} from "./Provider/Habr/HabrParser";
+import {DummyArticle, DummyComment} from "./Integration/Dummy/DummyComment";
+import {HabrParser} from "./Integration/Habr/HabrParser";
 
 function App(): ReactElement {
     // console.clear()

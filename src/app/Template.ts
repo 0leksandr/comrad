@@ -5,9 +5,9 @@ export class TemplateComment {
     constructor(public readonly comment: Comment, protected readonly children: TemplateComment[]) {}
 
     protected grow(node: Node, level: number): void {
-        this.children.forEach((child, index) => {
-            node.add(new NodePayload(child.comment, level + 1))
-            child.grow(node.children[index], level + 1)
+        this.children.forEach((child) => {
+            const leave = node.add(new NodePayload(child.comment, level + 1))
+            child.grow(leave, level + 1)
         })
     }
 
