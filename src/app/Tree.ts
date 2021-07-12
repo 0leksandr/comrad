@@ -17,50 +17,153 @@ export class NodePayload { // TODO: rename. Leave?
     }
 }
 
-// abstract class YoungNode { // TODO: rename
-//     children: Leave[] = []
-//
-//     protected constructor(public readonly payload: NodePayload) {}
-//
-//     add(payload: NodePayload): Leave {
-//         this.children.push(new Leave(this, payload))
-//         return this.children[this.children.length - 1]
-//     }
-//
-//     walk(fn: (node: YoungNode) => void): void {
-//         fn(this)
-//         this.children.forEach(child => child.walk(fn))
-//     }
-// }
+export abstract class YoungNode { // TODO: rename. Or remove (move logic to Template)
+    public readonly children: YoungLeave[] = []
+
+    constructor(public readonly payload: NodePayload) {}
+
+    abstract harden(node: Node): void // TODO: rename. draw?
+
+    isTrunk(): boolean { // TODO: remove?
+        if (this.payload.isRoot()) return true
+        return this.children.some(child => child.isTrunk())
+    }
+
+    add(payload: NodePayload): YoungLeave {
+        this.children.push(new YoungLeave(payload))
+        return this.children[this.children.length - 1]
+    }
+
+    walk(fn: (node: YoungNode) => void): void {
+        fn(this)
+        this.children.forEach(child => child.walk(fn))
+    }
+
+    protected childAngle(
+        node: Node,
+        thisSectorSize: number, // TODO
+        childIndex: number,
+        nrChildren: number,
+    ): number {
+        if (nrChildren === 1) {
+            if (childIndex === 0) {
+                return node.angle
+            } else {
+                throw new Error("Logic error")
+            }
+        }
+        return node.angle - thisSectorSize / 2 + thisSectorSize * childIndex / (nrChildren - 1)
+    }
+}
+export class YoungRoot extends YoungNode {
+    harden(node: Node): void { // TODO: remove (inline)?
+        if (this.payload.isRoot()) {
+            const sectorSize = 1
+            this.children.forEach((child, index) => {
+                node.add(
+                    child,
+                    this.childAngle(node, sectorSize, index, this.children.length + 1),
+                    sectorSize / this.children.length,
+                )
+            })
+        } else {
+            const bastards: YoungLeave[] = []
+            this.children.forEach(child => {
+                if (child.isTrunk()) {
+                    node.add(child, node.angle, 0)
+                } else {
+                    bastards.push(child)
+                }
+            })
+            const sectorSize = 0.4 // TODO: test other values
+            bastards.forEach((bastard, index) => {
+                node.add(
+                    bastard,
+                    this.childAngle(node, sectorSize, index, bastards.length) - 0.5,
+                    sectorSize / bastards.length,
+                )
+            })
+        }
+    }
+
+    asTree(): Tree {
+        const angle = 0.5
+        const root = new Root(this.payload, angle, this.sectorSize())
+        this.harden(root)
+        return new Tree(root)
+    }
+
+    private sectorSize(): number { // TODO: remove?
+        return this.payload.isRoot() ? 1 : 0.4 // TODO: test other values
+    }
+}
+export class YoungLeave extends YoungNode {
+    harden(node: Node): void {
+        if (this.payload.isRoot()) {
+            const sectorSize = 0.5 // TODO: test other values
+            this.children.forEach((child, index) => {
+                node.add(
+                    child,
+                    this.childAngle(node, sectorSize, index, this.children.length),
+                    sectorSize / this.children.length,
+                )
+            })
+        } else if (this.isTrunk()) {
+            const bastards: YoungLeave[] = []
+            this.children.forEach(child => {
+                if (child.isTrunk()) {
+                    node.add(child, node.angle, 0)
+                } else {
+                    bastards.push(child)
+                }
+            })
+            const angle = 1 / 3 // TODO: test other values
+            if (bastards.length === 2) {
+                node.add(bastards[0], node.angle - angle, 0)
+                node.add(bastards[1], node.angle + angle, 0)
+            } else {
+                bastards.forEach(bastard => {
+                    node.add(bastard, node.angle + angle, 0)
+                })
+            }
+        } else {
+            this.children.forEach((child, index) => {
+                node.add(
+                    child,
+                    this.childAngle(node, node.sectorSize, index, this.children.length),
+                    node.sectorSize / this.children.length,
+                )
+            })
+        }
+    }
+}
 
 export abstract class Node {
     private readonly diameter = 100
     children: Leave[] = []
 
-    protected constructor(public readonly payload: NodePayload) {}
-
-    abstract sectorSize(): number
+    constructor(
+        public readonly payload: NodePayload,
+        public readonly angle: number,
+        public readonly sectorSize: number,
+    ) {}
 
     abstract absolutePosition(): Position
 
     abstract relativePosition(): Position
 
-    abstract angle(): number
-
     abstract neighbours(): Node[]
 
     abstract isRoot(): boolean
-
-    abstract childAngle(childIndex: number): number
 
     isTrunk(): boolean {
         if (this.payload.isRoot()) return true
         return this.children.some(child => child.isTrunk())
     }
 
-    add(payload: NodePayload): Leave {
-        this.children.push(new Leave(this, payload))
-        return this.children[this.children.length - 1]
+    add(leave: YoungLeave, angle: number, sectorSize: number): void {
+        this.children.push(new Leave(this, leave.payload, angle, sectorSize))
+        leave.harden(this.children[this.children.length - 1])
     }
 
     radius(): number {
@@ -82,12 +185,12 @@ export abstract class Node {
     }
 
     asTree(): Tree {
-        const angle = this.payload.isRoot() ? this.angle() : (this.angle() - .5);
-        const root = new Root(this.payload, angle)
-        this.neighbours().forEach(neighbour => {
-            neighbour.joinTo(root)
+        // const angle = this.payload.isRoot() ? this.angle : (this.angle - .5);
+        const root = new YoungRoot(this.payload)
+        this.neighbours().forEach(child => {
+            child.joinTo(root)
         })
-        return new Tree(root)
+        return root.asTree()
     }
 
     style(): {} {
@@ -98,61 +201,21 @@ export abstract class Node {
         }
     }
 
-    protected joinTo(source: Node): void {
+    protected joinTo(source: YoungNode): void {
         const added = source.add(this.payload)
         this.neighbours().forEach(neighbour => {
             if (!neighbour.payload.is(source.payload)) neighbour.joinTo(added)
         })
     }
-
-    protected subAngle(childIndex: number, nrChildren: number): number {
-        if (nrChildren === 1) {
-            if (childIndex === 0) {
-                return this.angle()
-            } else {
-                throw new Error("Logic error")
-            }
-        }
-        const sectorSize = this.sectorSize()
-        return this.angle() - sectorSize / 2 + sectorSize * childIndex / (nrChildren - 1)
-    }
-
-    protected getBastardIndex(childIndex: number): number { // TODO: rename
-        let trunkIndex = null
-        this.children.forEach((child, index) => {
-            if (child.isTrunk()) trunkIndex = index
-        })
-        if (trunkIndex === null) {
-            return childIndex
-        } else if (childIndex > trunkIndex) {
-            return childIndex - 1
-        } else if (childIndex === trunkIndex) {
-            throw new Error("Cannot get bastard index for a trunk")
-        } else {
-            return childIndex
-        }
-    }
 }
 
 export class Root extends Node {
-    constructor(payload: NodePayload, private readonly _angle: number) {
-        super(payload)
-    }
-    
-    sectorSize(): number {
-        return this.payload.isRoot() ? 1 : 0.4 // TODO: test other values
-    }
-
     absolutePosition(): Position {
         return new Position(0, 0)
     }
 
     relativePosition(): Position {
         return new Position(0, 0)
-    }
-
-    angle(): number {
-        return this._angle
     }
 
     neighbours(): Node[] {
@@ -162,32 +225,19 @@ export class Root extends Node {
     isRoot(): boolean {
         return true
     }
-
-    childAngle(childIndex: number): number {
-        if (this.payload.isRoot()) {
-            return this.subAngle(childIndex, this.children.length + 1)
-        } else {
-            return this.subAngle(this.getBastardIndex(childIndex), this.children.length - 1) - 0.5
-        }
-    }
 }
 
 export class Leave extends Node { // TODO: cache
-    private readonly childIndex: number
+    private readonly childIndex: number // TODO: remove
 
-    constructor(private readonly parent: Node, payload: NodePayload) {
-        super(payload)
+    constructor(
+        private readonly parent: Node,
+        payload: NodePayload,
+        angle: number,
+        sectorSize: number,
+    ) {
+        super(payload, angle, sectorSize)
         this.childIndex = parent.children.length
-    }
-
-    sectorSize(): number {
-        if (this.payload.isRoot()) {
-            return 0.5 // TODO: test other values
-        } else if (this.isTrunk()) {
-            return 0.1 // TODO: test
-        } else {
-            return this.parent.sectorSize() / (this.parent.children.length + 1) // TODO: remove +1 ?
-        }
     }
 
     absolutePosition(): Position {
@@ -196,18 +246,10 @@ export class Leave extends Node { // TODO: cache
 
     relativePosition(): Position {
         const length = 150
-        const angle = this.angle() * 2 * Math.PI
+        const angle = this.angle * 2 * Math.PI
         const x = length * Math.sin(angle)
         const y = length * Math.cos(angle)
         return new Position(x, y)
-    }
-
-    angle(): number {
-        if (this.isTrunk()) {
-            return this.parent.angle()
-        } else {
-            return this.parent.childAngle(this.childIndex)
-        }
     }
 
     neighbours(): Node[] {
@@ -217,50 +259,6 @@ export class Leave extends Node { // TODO: cache
     isRoot(): boolean {
         return false
     }
-
-    childAngle(childIndex: number): number {
-        if (this.isTrunk() && !this.payload.isRoot()) {
-            const nrBastards = this.children.length - 1
-            const corrective = 1 / 3
-            const angle = this.angle()
-            switch (nrBastards) {
-                case 0: throw new Error("Logic error")
-                case 1: return angle + corrective
-                case 2: return this.getBastardIndex(childIndex) === 0 ? (angle + corrective) : (angle - corrective)
-                default: return (angle + corrective) // TODO: check
-            }
-        } else {
-            return this.subAngle(childIndex, this.children.length)
-        }
-    }
-
-    // protected childOf(): ChildOf {
-    //     const p = this.parent;
-    //     const getBastardIndex = (): number => {
-    //         let bastardIndex = this.childIndex
-    //         let trunkIndex = null
-    //         for (const key in p.children) {
-    //             if (p.children[key].isTrunk()) trunkIndex = parseInt(key)
-    //         }
-    //         if (trunkIndex === null) throw new Error("Logic error")
-    //         if (trunkIndex < bastardIndex) --bastardIndex
-    //         return bastardIndex
-    //     }
-    //     if (p.isRoot() && p.payload.isRoot()) {
-    //         return new ChildOfCenter(this.childIndex, this.parent)
-    //     } else if (p.isRoot()) {
-    //         return new ChildOfRootNode(getBastardIndex(), this.parent)
-    //     } else if (p.payload.isRoot()) {
-    //         return new ChildOfRootArticle(this.childIndex, this.parent)
-    //     } else if (p.isTrunk()) {
-    //         const bastardIndex = getBastardIndex()
-    //         return bastardIndex < (p.children.length - 1) / 2
-    //             ? new LeftChildOfTrunk(bastardIndex, this.parent)
-    //             : new RightChildOfTrunk(bastardIndex, this.parent)
-    //     } else {
-    //         return new NormalChild(this.childIndex, this.parent)
-    //     }
-    // }
 }
 
 // class Group extends Leave {
@@ -278,62 +276,9 @@ export class Leave extends Node { // TODO: cache
 //     }
 // }
 
-// abstract class Role {
-//     abstract group(): void
-//
-//     abstract childAngle(childIndex: number): number
-// }
-// class RoleCenter extends Role { // root and article
-// }
-// class RoleNodeRoot extends Role {
-// }
-// class RoleArticle extends Role {
-// }
-// class RoleTrunk extends Role {
-// }
-// class RoleNormal extends Role {
-// }
-
-// abstract class ChildOf {
-//     constructor(protected readonly bastardIndex: number, protected readonly parent: Node) {}
-//
-//     angle(): number {
-//         if (this.nrBastards() === 1) return this.parent.angle()
-//         const pSecSize = this.parent.sectorSize()
-//         return this.parent.angle() - pSecSize / 2 + pSecSize * this.bastardIndex / (this.nrBastards() - 1)
-//     }
-//
-//     protected nrBastards(): number {
-//         return this.parent.children.length
-//     }
-// }
-// abstract class ChildOfTrunk extends ChildOf {
-//     protected nrBastards(): number {
-//         return super.nrBastards() - 1
-//     }
-// }
-// class ChildOfCenter extends ChildOf {
-//     protected nrBastards(): number {
-//         return super.nrBastards() + 1
-//     }
-// }
-// class ChildOfRootNode extends ChildOfTrunk {
-//     angle(): number {
-//         return super.angle() - 0.5
-//     }
-// }
-// class ChildOfRootArticle extends ChildOf {}
-// class LeftChildOfTrunk extends ChildOfTrunk {
-//     angle(): number {
-//         return super.angle() - 0.25
-//     }
-// }
-// class RightChildOfTrunk extends ChildOfTrunk {
-//     angle(): number {
-//         return super.angle() + 0.25
-//     }
-// }
-// class NormalChild extends ChildOf {}
+class Sector {
+    constructor(public readonly angle: number, public readonly sectorSize: number) {}
+}
 
 export class Tree {
     public readonly nodes: Node[] = []

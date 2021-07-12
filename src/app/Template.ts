@@ -1,10 +1,10 @@
 import {Comment} from "./Comment";
-import {Node, NodePayload, Root, Tree} from "./Tree";
+import {YoungNode, NodePayload, YoungRoot, Tree} from "./Tree";
 
 export class TemplateComment {
     constructor(public readonly comment: Comment, protected readonly children: TemplateComment[]) {}
 
-    protected grow(node: Node, level: number): void {
+    protected grow(node: YoungNode, level: number): void {
         this.children.forEach((child) => {
             const leave = node.add(new NodePayload(child.comment, level + 1))
             child.grow(leave, level + 1)
@@ -19,8 +19,8 @@ export class TemplateComment {
 
 export class TemplateRoot extends TemplateComment {
     asTree(): Tree {
-        const root = new Root(new NodePayload(this.comment, 0), .5)
+        const root = new YoungRoot(new NodePayload(this.comment, 0))
         this.grow(root, 0)
-        return new Tree(root)
+        return root.asTree()
     }
 }
