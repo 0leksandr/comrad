@@ -65,8 +65,24 @@ export abstract class YoungNode { // TODO: rename. Or remove (move logic to Temp
         if (nrChildren === 2 && sectorSize > 1 / 2) sectorSize = 1 / 3
         return new Sector(this.childAngle(parentSector, childIndex, nrChildren), sectorSize)
     }
+
+    protected addTrunk(node: Node): YoungLeave[] { // TODO: rename
+        const bastards: YoungLeave[] = []
+        this.children.forEach(child => {
+            if (child.isTrunk()) {
+                if (child.payload.isRoot()) {
+                    node.add(child, new Sector(node.sector.angle, 0.5)) // TODO: test other values
+                } else {
+                    node.add(child, node.sector.narrow())
+                }
+            } else {
+                bastards.push(child)
+            }
+        })
+        return bastards
+    }
 }
-export class YoungRoot extends YoungNode {
+export class YoungRoot extends YoungNode { // TODO: remove unnecessary exports
     harden(node: Node): void { // TODO: remove (inline)?
         if (this.payload.isRoot()) {
             const sectorSize = 1
@@ -80,18 +96,7 @@ export class YoungRoot extends YoungNode {
                 )
             })
         } else {
-            const bastards: YoungLeave[] = []
-            this.children.forEach(child => {
-                if (child.isTrunk()) {
-                    if (child.payload.isRoot()) {
-                        node.add(child, new Sector(node.sector.angle, 0.5)) // TODO: test other values
-                    } else {
-                        node.add(child, node.sector.narrow())
-                    }
-                } else {
-                    bastards.push(child)
-                }
-            })
+            const bastards = this.addTrunk(node)
             bastards.forEach((bastard, index) => {
                 node.add(
                     bastard,
@@ -112,18 +117,7 @@ export class YoungRoot extends YoungNode {
 export class YoungLeave extends YoungNode {
     harden(node: Node): void {
         if (this.isTrunk() && !this.payload.isRoot()) {
-            const bastards: YoungLeave[] = []
-            this.children.forEach(child => {
-                if (child.isTrunk()) {
-                    if (child.payload.isRoot()) {
-                        node.add(child, new Sector(node.sector.angle, 0.5)) // TODO: test other values
-                    } else {
-                        node.add(child, node.sector.narrow())
-                    }
-                } else {
-                    bastards.push(child)
-                }
-            })
+            const bastards = this.addTrunk(node)
             const angle = 1 / 3 // TODO: test other values
             if (bastards.length === 2) {
                 node.add(bastards[0], node.sector.narrow().add(-angle))
