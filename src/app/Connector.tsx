@@ -1,9 +1,9 @@
 import React from "react";
 import {Element, Position} from "./General";
-import {Node} from "./Tree";
+import {AbstractNode} from "./Tree";
 
 export class Link {
-    constructor(public readonly parent: Node, public readonly child: Node) {}
+    constructor(public readonly parent: AbstractNode, public readonly child: AbstractNode) {}
 }
 
 abstract class Connector extends Element {

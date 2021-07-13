@@ -2,7 +2,9 @@ import {Position} from "./General";
 import {Comment} from "./Comment";
 import {Link} from "./Connector";
 
-export class NodePayload { // TODO: rename. Leave?
+// TODO: remove unnecessary exports
+
+export class NodePayload { // TODO: rename. Leaf?
     constructor(
         public readonly comment: Comment,
         public readonly commentLevel: number
@@ -17,8 +19,8 @@ export class NodePayload { // TODO: rename. Leave?
     }
 }
 
-export abstract class YoungNode { // TODO: rename. Or remove (move logic to Template)
-    public readonly children: YoungLeave[] = []
+export abstract class Sprout { // TODO: remove (move logic to Template)?
+    public readonly children: SproutLeave[] = []
 
     constructor(public readonly payload: NodePayload) {}
 
@@ -27,8 +29,8 @@ export abstract class YoungNode { // TODO: rename. Or remove (move logic to Temp
         return this.children.some(child => child.isTrunk())
     }
 
-    add(payload: NodePayload): YoungLeave {
-        this.children.push(new YoungLeave(payload))
+    add(payload: NodePayload): SproutLeave {
+        this.children.push(new SproutLeave(payload))
         return this.children[this.children.length - 1]
     }
 
@@ -59,8 +61,8 @@ export abstract class YoungNode { // TODO: rename. Or remove (move logic to Temp
         return new Sector(this.childAngle(parentSector, childIndex, nrChildren), sectorSize)
     }
 
-    protected addTrunk(node: Node): YoungLeave[] { // TODO: rename
-        const bastards: YoungLeave[] = []
+    protected addTrunk(node: AbstractNode): SproutLeave[] { // TODO: rename
+        const bastards: SproutLeave[] = []
         this.children.forEach(child => {
             if (child.isTrunk()) {
                 if (child.payload.isRoot()) {
@@ -75,7 +77,7 @@ export abstract class YoungNode { // TODO: rename. Or remove (move logic to Temp
         return bastards
     }
 }
-export class YoungRoot extends YoungNode { // TODO: remove unnecessary exports
+export class SproutRoot extends Sprout { // TODO: Sapling?
     asTree(): Tree {
         const angle = 0.5
         const sectorSize = this.payload.isRoot() ? 1 : 0.4 // TODO: test other values
@@ -103,8 +105,8 @@ export class YoungRoot extends YoungNode { // TODO: remove unnecessary exports
         return new Tree(root)
     }
 }
-class YoungLeave extends YoungNode {
-    harden(node: Node): void { // TODO: rename. draw?
+class SproutLeave extends Sprout {
+    harden(node: AbstractNode): void { // TODO: rename. draw?
         if (this.isTrunk() && !this.payload.isRoot()) {
             const bastards = this.addTrunk(node)
             const angle = 1 / 3 // TODO: test other values
@@ -127,9 +129,9 @@ class YoungLeave extends YoungNode {
     }
 }
 
-export abstract class Node {
+export abstract class AbstractNode {
     private readonly diameter = 100
-    children: Leave[] = []
+    children: Node[] = []
 
     constructor(
         public readonly payload: NodePayload,
@@ -140,17 +142,12 @@ export abstract class Node {
 
     abstract relativePosition(): Position
 
-    abstract neighbours(): Node[]
+    abstract neighbours(): AbstractNode[]
 
     abstract isRoot(): boolean
 
-    isTrunk(): boolean {
-        if (this.payload.isRoot()) return true
-        return this.children.some(child => child.isTrunk())
-    }
-
-    add(leave: YoungLeave, sector: Sector): void {
-        this.children.push(new Leave(this, leave.payload, sector))
+    add(leave: SproutLeave, sector: Sector): void {
+        this.children.push(new Node(this, leave.payload, sector))
         leave.harden(this.children[this.children.length - 1])
     }
 
@@ -158,7 +155,7 @@ export abstract class Node {
         return this.diameter / 2
     }
 
-    walk(fn: (node: Node) => void): void {
+    walk(fn: (node: AbstractNode) => void): void {
         fn(this)
         this.children.forEach(child => child.walk(fn))
     }
@@ -174,7 +171,7 @@ export abstract class Node {
 
     asTree(): Tree {
         // const angle = this.payload.isRoot() ? this.angle : (this.angle - .5);
-        const root = new YoungRoot(this.payload)
+        const root = new SproutRoot(this.payload)
         this.neighbours().forEach(child => {
             child.joinTo(root)
         })
@@ -189,7 +186,7 @@ export abstract class Node {
         }
     }
 
-    protected joinTo(source: YoungNode): void {
+    protected joinTo(source: Sprout): void {
         const added = source.add(this.payload)
         this.neighbours().forEach(neighbour => {
             if (!neighbour.payload.is(source.payload)) neighbour.joinTo(added)
@@ -197,7 +194,7 @@ export abstract class Node {
     }
 }
 
-class Root extends Node {
+class Root extends AbstractNode {
     absolutePosition(): Position {
         return new Position(0, 0)
     }
@@ -206,7 +203,7 @@ class Root extends Node {
         return new Position(0, 0)
     }
 
-    neighbours(): Node[] {
+    neighbours(): AbstractNode[] {
         return this.children
     }
 
@@ -215,9 +212,9 @@ class Root extends Node {
     }
 }
 
-class Leave extends Node { // TODO: cache
+class Node extends AbstractNode { // TODO: cache
     constructor(
-        private readonly parent: Node,
+        private readonly parent: AbstractNode,
         payload: NodePayload,
         sector: Sector,
     ) {
@@ -236,7 +233,7 @@ class Leave extends Node { // TODO: cache
         return new Position(x, y)
     }
 
-    neighbours(): Node[] {
+    neighbours(): AbstractNode[] {
         return [this.parent, ...this.children]
     }
 
@@ -245,8 +242,8 @@ class Leave extends Node { // TODO: cache
     }
 }
 
-// class Group extends Leave {
-//     constructor(private readonly leaves: Leave[]) {
+// class Group extends Node {
+//     constructor(private readonly leaves: Node[]) {
 //         if (leaves.length < 2) throw new Error("")
 //         super()
 //     }
@@ -273,12 +270,12 @@ class Sector {
 }
 
 export class Tree {
-    public readonly nodes: Node[] = []
+    public readonly nodes: AbstractNode[] = []
     public readonly links: Link[]
 
     constructor(root: Root) {
         this.links = root.links()
-        root.walk((node: Node): void => {
+        root.walk((node: AbstractNode): void => {
             this.nodes.push(node)
         })
     }
