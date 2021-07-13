@@ -140,11 +140,9 @@ export abstract class AbstractNode {
 
     abstract absolutePosition(): Position
 
-    abstract relativePosition(): Position
-
-    abstract neighbours(): AbstractNode[]
-
     abstract isRoot(): boolean
+
+    protected abstract neighbours(): AbstractNode[]
 
     add(leave: SproutLeave, sector: Sector): void {
         this.children.push(new Node(this, leave.payload, sector))
@@ -169,8 +167,7 @@ export abstract class AbstractNode {
         return links
     }
 
-    asTree(): Tree {
-        // const angle = this.payload.isRoot() ? this.angle : (this.angle - .5);
+    asTree(): Tree { // TODO: move to Node
         const root = new SproutRoot(this.payload)
         this.neighbours().forEach(child => {
             child.joinTo(root)
@@ -192,6 +189,14 @@ export abstract class AbstractNode {
             if (!neighbour.payload.is(source.payload)) neighbour.joinTo(added)
         })
     }
+
+    protected relativePosition(): Position {
+        const length = 150
+        const angle = this.sector.angle * 2 * Math.PI
+        const x = length * Math.sin(angle)
+        const y = length * Math.cos(angle)
+        return new Position(x, y)
+    }
 }
 
 class Root extends AbstractNode {
@@ -199,16 +204,16 @@ class Root extends AbstractNode {
         return new Position(0, 0)
     }
 
-    relativePosition(): Position {
-        return new Position(0, 0)
+    isRoot(): boolean {
+        return true
     }
 
-    neighbours(): AbstractNode[] {
+    protected neighbours(): AbstractNode[] {
         return this.children
     }
 
-    isRoot(): boolean {
-        return true
+    protected relativePosition(): Position {
+        return new Position(0, 0)
     }
 }
 
@@ -225,20 +230,12 @@ class Node extends AbstractNode { // TODO: cache
         return this.parent.absolutePosition().addPosition(this.relativePosition())
     }
 
-    relativePosition(): Position {
-        const length = 150
-        const angle = this.sector.angle * 2 * Math.PI
-        const x = length * Math.sin(angle)
-        const y = length * Math.cos(angle)
-        return new Position(x, y)
-    }
-
-    neighbours(): AbstractNode[] {
-        return [this.parent, ...this.children]
-    }
-
     isRoot(): boolean {
         return false
+    }
+
+    protected neighbours(): AbstractNode[] {
+        return [this.parent, ...this.children]
     }
 }
 
@@ -246,14 +243,6 @@ class Node extends AbstractNode { // TODO: cache
 //     constructor(private readonly leaves: Node[]) {
 //         if (leaves.length < 2) throw new Error("")
 //         super()
-//     }
-//
-//     isTrunk(): boolean {
-//         return false
-//     }
-//
-//     isRoot(): boolean {
-//         return false
 //     }
 // }
 
