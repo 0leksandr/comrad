@@ -15,6 +15,16 @@ export const ComRadFC: FC<ComRadProps> = ({originalTree}) => {
             {tree.links.map(link => {
                 return new LineConnector(link).render()
             })}
+            <motion.div className="node" // TODO: do not duplicate
+                        key="root"
+                        style={tree.root.style()}
+                        animate={tree.root.absolutePosition().asStyle()}>
+                <div className="comment-holder">
+                    <div className="comment">
+                        {tree.root.payload.comment.render()}
+                    </div>
+                </div>
+            </motion.div>
             {tree.nodes.map(node => {
                 const comment = node.payload.comment
 
@@ -23,7 +33,7 @@ export const ComRadFC: FC<ComRadProps> = ({originalTree}) => {
                                 key={comment.id}
                                 style={node.style()}
                                 animate={node.absolutePosition().asStyle()}
-                                onClick={() => { if (!node.isRoot()) setTree(node.asTree()) }}
+                                onClick={() => { setTree(node.asTree()) }}
                     >
                         <div className="comment-holder">
                             <div className="comment">

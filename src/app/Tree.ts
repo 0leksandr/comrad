@@ -140,8 +140,6 @@ export abstract class AbstractNode {
 
     abstract absolutePosition(): Position
 
-    abstract isRoot(): boolean
-
     protected abstract neighbours(): AbstractNode[]
 
     add(leave: SproutLeave, sector: Sector): void {
@@ -153,9 +151,8 @@ export abstract class AbstractNode {
         return this.diameter / 2
     }
 
-    walk(fn: (node: AbstractNode) => void): void {
-        fn(this)
-        this.children.forEach(child => child.walk(fn))
+    walkNodes(fn: (node: Node) => void): void {
+        this.children.forEach(child => child.walkNodes(fn))
     }
 
     links(): Link[] {
@@ -167,14 +164,6 @@ export abstract class AbstractNode {
         return links
     }
 
-    asTree(): Tree { // TODO: move to Node
-        const root = new SproutRoot(this.payload)
-        this.neighbours().forEach(child => {
-            child.joinTo(root)
-        })
-        return root.asTree()
-    }
-
     style(): {} {
         return {
             width: this.diameter,
@@ -183,7 +172,7 @@ export abstract class AbstractNode {
         }
     }
 
-    protected joinTo(source: Sprout): void {
+    joinTo(source: Sprout): void {
         const added = source.add(this.payload)
         this.neighbours().forEach(neighbour => {
             if (!neighbour.payload.is(source.payload)) neighbour.joinTo(added)
@@ -202,10 +191,6 @@ export abstract class AbstractNode {
 class Root extends AbstractNode {
     absolutePosition(): Position {
         return new Position(0, 0)
-    }
-
-    isRoot(): boolean {
-        return true
     }
 
     protected neighbours(): AbstractNode[] {
@@ -230,8 +215,17 @@ class Node extends AbstractNode { // TODO: cache
         return this.parent.absolutePosition().addPosition(this.relativePosition())
     }
 
-    isRoot(): boolean {
-        return false
+    walkNodes(fn: (node: Node) => void) {
+        fn(this)
+        super.walkNodes(fn)
+    }
+
+    asTree(): Tree { // TODO: move to Node
+        const root = new SproutRoot(this.payload)
+        this.neighbours().forEach(neighbour => {
+            neighbour.joinTo(root)
+        })
+        return root.asTree()
     }
 
     protected neighbours(): AbstractNode[] {
@@ -259,12 +253,12 @@ class Sector {
 }
 
 export class Tree {
-    public readonly nodes: AbstractNode[] = []
+    public readonly nodes: Node[] = []
     public readonly links: Link[]
 
-    constructor(root: Root) {
+    constructor(public readonly root: Root) {
         this.links = root.links()
-        root.walk((node: AbstractNode): void => {
+        root.walkNodes((node: Node): void => {
             this.nodes.push(node)
         })
     }
