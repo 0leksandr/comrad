@@ -107,7 +107,7 @@ export class SproutRoot extends Sprout { // TODO: Sapling?
     }
 }
 class SproutLeave extends Sprout {
-    harden(node: AbstractParentNode): void { // TODO: rename. draw?
+    harden(node: AbstractParentNode): void {
         if (this.isTrunk() && !this.payload.isRoot()) {
             const bastards = this.addTrunk(node)
             const angle = 1 / 3 // TODO: test other values
@@ -201,10 +201,10 @@ export abstract class AbstractParentNode extends AbstractNode implements InnerNo
         return nodes
     }
 
-    joinTo(source: Sprout): void { // TODO: soften?
+    soften(source: Sprout): void {
         const added = source.add(this.payload)
         this.neighbours().forEach(neighbour => {
-            if (!neighbour.payload.is(source.payload)) neighbour.joinTo(added)
+            if (!neighbour.payload.is(source.payload)) neighbour.soften(added)
         })
     }
 
@@ -253,10 +253,10 @@ class Node extends AbstractParentNode implements InnerNode, OuterNode { // TODO:
         return [this, ...super.outerNodes()]
     }
 
-    asTree(): Tree { // TODO: move to Node
+    asTree(): Tree {
         const root = new SproutRoot(this.payload)
         this.neighbours().forEach(neighbour => {
-            neighbour.joinTo(root)
+            neighbour.soften(root)
         })
         return root.asTree()
     }
