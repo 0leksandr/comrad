@@ -130,10 +130,9 @@ class SproutLeave extends Sprout {
     }
 }
 
-interface PositionedNode { // TODO: rename
+interface NodeInterface {
     absolutePosition(): Position
-}
-interface DisplayedNode extends PositionedNode {
+
     style(): {}
 
     radius(): number
@@ -142,23 +141,21 @@ interface DisplayedNode extends PositionedNode {
 
     render(): ReactElement
 }
-interface InnerNode extends DisplayedNode {}
-export interface OuterNode extends DisplayedNode {
+export interface InnerNode extends NodeInterface {}
+export interface OuterNode extends NodeInterface {
     asTree(): Tree
 
     id(): string
 }
 
-abstract class DirectedNode implements PositionedNode { // TODO: rename
+export abstract class AbstractNode implements NodeInterface {
+    private readonly diameter = 100
+
     protected constructor(public readonly sector: Sector) {}
 
     abstract absolutePosition(): Position
 
-    abstract collectNodes(): OuterNode[] // TODO: visibleNodes, group
-}
-
-export abstract class AbstractDisplayedNode extends DirectedNode implements DisplayedNode {
-    private readonly diameter = 100 // TODO: move to AbstractGroupNode (and rename to VisibleNode)
+    abstract outerNodes(): OuterNode[]
 
     abstract links(): Link[]
 
@@ -179,7 +176,7 @@ export abstract class AbstractDisplayedNode extends DirectedNode implements Disp
     }
 }
 
-export abstract class AbstractParentNode extends AbstractDisplayedNode implements InnerNode {
+export abstract class AbstractParentNode extends AbstractNode implements InnerNode {
     children: Node[] = []
 
     constructor(
@@ -196,10 +193,10 @@ export abstract class AbstractParentNode extends AbstractDisplayedNode implement
         leave.harden(this.children[this.children.length - 1])
     }
 
-    collectNodes(): OuterNode[] {
+    outerNodes(): OuterNode[] {
         let nodes: OuterNode[] = []
         this.children.forEach(child => {
-            nodes = nodes.concat(child.collectNodes())
+            nodes = nodes.concat(child.outerNodes())
         })
         return nodes
     }
@@ -252,8 +249,8 @@ class Node extends AbstractParentNode implements InnerNode, OuterNode { // TODO:
         return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
     }
 
-    collectNodes(): OuterNode[] {
-        return [this, ...super.collectNodes()]
+    outerNodes(): OuterNode[] {
+        return [this, ...super.outerNodes()]
     }
 
     asTree(): Tree { // TODO: move to Node
@@ -323,7 +320,7 @@ export class Tree { // TODO: remove?
     public readonly links: Link[]
 
     constructor(public readonly root: Root) {
-        this.nodes = this.root.collectNodes()
+        this.nodes = this.root.outerNodes()
         this.links = this.root.links()
     }
 }

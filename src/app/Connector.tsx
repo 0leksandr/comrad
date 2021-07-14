@@ -1,10 +1,10 @@
 import React from "react";
 import {Element, Position} from "./General";
-import {AbstractDisplayedNode, OuterNode} from "./Tree";
+import {InnerNode, OuterNode} from "./Tree";
 
 export class Link {
     constructor(
-        public readonly parent: AbstractDisplayedNode, // TODO: InnerNode?
+        public readonly parent: InnerNode,
         public readonly child: OuterNode,
     ) {}
 }
