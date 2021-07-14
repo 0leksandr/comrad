@@ -1,9 +1,12 @@
 import React from "react";
 import {Element, Position} from "./General";
-import {AbstractNode} from "./Tree";
+import {AbstractGroupNode, OuterGroupNode} from "./Tree";
 
 export class Link {
-    constructor(public readonly parent: AbstractNode, public readonly child: AbstractNode) {}
+    constructor(
+        public readonly parent: AbstractGroupNode, // TODO: GroupNodeDecorator?
+        public readonly child: OuterGroupNode,
+    ) {}
 }
 
 abstract class Connector extends Element {
@@ -12,7 +15,7 @@ abstract class Connector extends Element {
     }
 
     protected color(): string {
-        const level = Math.min(this.link.parent.payload.commentLevel, this.link.child.payload.commentLevel)
+        const level = Math.min(this.link.parent.commentLevel(), this.link.child.commentLevel())
         return this.colors[level % this.colors.length]
     }
 }
@@ -32,7 +35,7 @@ export class LineConnector extends Connector {
         const lineTo = to.subPosition(topLeft)
         return (
             <svg className="connector radial-connector"
-                 key={`connector-${this.link.child.payload.comment.id}`}
+                 key={`connector-${this.link.child.id()}`}
                  width={Math.abs(from.x - to.x) + this.thickness}
                  height={Math.abs(from.y - to.y) + this.thickness}
                  style={topLeft.asStyle()}

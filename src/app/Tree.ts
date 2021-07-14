@@ -1,6 +1,7 @@
 import {Position} from "./General";
 import {Comment} from "./Comment";
 import {Link} from "./Connector";
+import {ReactElement} from "react";
 
 // TODO: remove unnecessary exports
 
@@ -129,16 +130,27 @@ class SproutLeave extends Sprout {
     }
 }
 
-export abstract class AbstractNode {
-    private readonly diameter = 100
+interface PositionedNodeInterface { // TODO: rename
+    absolutePosition(): Position
+}
+
+abstract class DirectedNode implements PositionedNodeInterface { // TODO: rename
+    protected constructor(public readonly sector: Sector) {}
+
+    abstract absolutePosition(): Position
+
+    abstract collectNodes(): OuterGroupNode[] // TODO: visibleNodes
+}
+
+export abstract class AbstractNode extends DirectedNode { // TODO: InnerNode, HardNode?
     children: Node[] = []
 
     constructor(
         public readonly payload: NodePayload,
-        public readonly sector: Sector,
-    ) {}
-
-    abstract absolutePosition(): Position
+        sector: Sector,
+    ) {
+        super(sector)
+    }
 
     protected abstract neighbours(): AbstractNode[]
 
@@ -147,44 +159,19 @@ export abstract class AbstractNode {
         leave.harden(this.children[this.children.length - 1])
     }
 
-    radius(): number {
-        return this.diameter / 2
-    }
-
-    walkNodes(fn: (node: Node) => void): void {
-        this.children.forEach(child => child.walkNodes(fn))
-    }
-
-    links(): Link[] {
-        let links: Link[] = []
+    collectNodes(): OuterGroupNode[] {
+        let nodes: OuterGroupNode[] = []
         this.children.forEach(child => {
-            links.push(new Link(this, child))
-            links = links.concat(child.links())
+            nodes = nodes.concat(child.collectNodes())
         })
-        return links
+        return nodes
     }
 
-    style(): {} {
-        return {
-            width: this.diameter,
-            height: this.diameter,
-            borderRadius: this.radius(),
-        }
-    }
-
-    joinTo(source: Sprout): void {
+    joinTo(source: Sprout): void { // TODO: soften?
         const added = source.add(this.payload)
         this.neighbours().forEach(neighbour => {
             if (!neighbour.payload.is(source.payload)) neighbour.joinTo(added)
         })
-    }
-
-    protected relativePosition(): Position {
-        const length = 150
-        const angle = this.sector.angle * 2 * Math.PI
-        const x = length * Math.sin(angle)
-        const y = length * Math.cos(angle)
-        return new Position(x, y)
     }
 }
 
@@ -193,12 +180,12 @@ class Root extends AbstractNode {
         return new Position(0, 0)
     }
 
-    protected neighbours(): AbstractNode[] {
-        return this.children
+    group(): GroupRoot {
+        return new GroupRoot(this)
     }
 
-    protected relativePosition(): Position {
-        return new Position(0, 0)
+    protected neighbours(): AbstractNode[] {
+        return this.children
     }
 }
 
@@ -212,12 +199,11 @@ class Node extends AbstractNode { // TODO: cache
     }
 
     absolutePosition(): Position {
-        return this.parent.absolutePosition().addPosition(this.relativePosition())
+        return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
     }
 
-    walkNodes(fn: (node: Node) => void) {
-        fn(this)
-        super.walkNodes(fn)
+    collectNodes(): OuterGroupNode[] {
+        return [new MiddleGroupNode(this), ...super.collectNodes()]
     }
 
     asTree(): Tree { // TODO: move to Node
@@ -233,6 +219,84 @@ class Node extends AbstractNode { // TODO: cache
     }
 }
 
+interface GroupNodeInterface extends PositionedNodeInterface {
+    style(): {} // TODO: new type?
+
+    radius(): number
+
+    commentLevel(): number
+
+    render(): ReactElement
+}
+interface InnerGroupNode extends GroupNodeInterface {}
+export interface OuterGroupNode extends GroupNodeInterface {
+    asTree(): Tree
+
+    id(): string
+}
+export abstract class AbstractGroupNode extends DirectedNode implements GroupNodeInterface {
+    private readonly diameter = 100 // TODO: move to AbstractGroupNode (and rename to VisibleNode)
+
+    abstract links(): Link[]
+
+    abstract render(): ReactElement
+
+    abstract commentLevel(): number
+
+    radius(): number {
+        return this.diameter / 2
+    }
+
+    style(): {} {
+        return {
+            width: this.diameter,
+            height: this.diameter,
+            borderRadius: this.radius(),
+        }
+    }
+}
+class GroupNodeDecorator<TNode extends AbstractNode> extends AbstractGroupNode implements InnerGroupNode {
+    constructor(protected readonly node: TNode) {
+        super(node.sector)
+    }
+
+    absolutePosition(): Position {
+        return this.node.absolutePosition()
+    }
+
+    links(): Link[] {
+        let links: Link[] = []
+        this.node.children.forEach(child => {
+            const decoratedChild = new MiddleGroupNode(child);
+            links.push(new Link(this, decoratedChild))
+            links = links.concat(decoratedChild.links())
+        })
+        return links
+    }
+
+    collectNodes(): OuterGroupNode[] {
+        return this.node.collectNodes()
+    }
+
+    render(): ReactElement {
+        return this.node.payload.comment.render()
+    }
+
+    commentLevel(): number { // TODO: rename
+        return this.node.payload.commentLevel
+    }
+}
+class GroupRoot extends GroupNodeDecorator<Root> {}
+class MiddleGroupNode extends GroupNodeDecorator<Node> implements OuterGroupNode {
+    asTree(): Tree {
+        return this.node.asTree()
+    }
+
+    id(): string {
+        return `node-${this.node.payload.comment.id}`
+    }
+}
+
 // class Group extends Node {
 //     constructor(private readonly leaves: Node[]) {
 //         if (leaves.length < 2) throw new Error("")
@@ -241,7 +305,10 @@ class Node extends AbstractNode { // TODO: cache
 // }
 
 class Sector {
-    constructor(public readonly angle: number, public readonly sectorSize: number) {}
+    constructor(
+        public readonly angle: number, // TODO: direction, vector
+        public readonly sectorSize: number, // TODO: width?
+    ) {}
 
     narrow(): Sector {
         return new Sector(this.angle, 0)
@@ -250,16 +317,24 @@ class Sector {
     add(angle: number): Sector {
         return new Sector(this.angle + angle, this.sectorSize)
     }
+
+    relativePosition(): Position {
+        const length = 150
+        const angle = this.angle * 2 * Math.PI
+        const x = length * Math.sin(angle)
+        const y = length * Math.cos(angle)
+        return new Position(x, y)
+    }
 }
 
-export class Tree {
-    public readonly nodes: Node[] = []
+export class Tree { // TODO: remove?
+    public readonly root: GroupRoot
+    public readonly nodes: OuterGroupNode[]
     public readonly links: Link[]
 
-    constructor(public readonly root: Root) {
-        this.links = root.links()
-        root.walkNodes((node: Node): void => {
-            this.nodes.push(node)
-        })
+    constructor(root: Root) {
+        this.root = root.group()
+        this.nodes = this.root.collectNodes()
+        this.links = this.root.links()
     }
 }

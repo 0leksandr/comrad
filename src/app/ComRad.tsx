@@ -21,23 +21,21 @@ export const ComRadFC: FC<ComRadProps> = ({originalTree}) => {
                         animate={tree.root.absolutePosition().asStyle()}>
                 <div className="comment-holder">
                     <div className="comment">
-                        {tree.root.payload.comment.render()}
+                        {tree.root.render()}
                     </div>
                 </div>
             </motion.div>
             {tree.nodes.map(node => {
-                const comment = node.payload.comment
-
                 return (
                     <motion.div className="node"
-                                key={comment.id}
+                                key={node.id()}
                                 style={node.style()}
                                 animate={node.absolutePosition().asStyle()}
                                 onClick={() => { setTree(node.asTree()) }}
                     >
                         <div className="comment-holder">
                             <div className="comment">
-                                {comment.render()}
+                                {node.render()}
                             </div>
                         </div>
                     </motion.div>
