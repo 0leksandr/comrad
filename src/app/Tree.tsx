@@ -141,11 +141,15 @@ interface NodeInterface {
 
     render(): ReactElement
 }
-export interface InnerNode extends NodeInterface {}
+export interface InnerNode extends NodeInterface {
+    group(): void
+}
 export interface OuterNode extends NodeInterface {
     asTree(): Tree
 
     id(): string
+
+    getParent(): InnerNode
 }
 
 export abstract class AbstractNode implements NodeInterface {
@@ -185,6 +189,8 @@ export abstract class AbstractParentNode extends AbstractNode implements InnerNo
     ) {
         super(sector)
     }
+
+    abstract group(): void
 
     protected abstract neighbours(): AbstractParentNode[]
 
@@ -231,6 +237,12 @@ class Root extends AbstractParentNode implements InnerNode {
         return new Position(0, 0)
     }
 
+    group(): void { // TODO: group root itself
+        this.children.forEach(child => {
+            child.group()
+        })
+    }
+
     protected neighbours(): AbstractParentNode[] {
         return this.children
     }
@@ -265,31 +277,77 @@ class Node extends AbstractParentNode implements InnerNode, OuterNode { // TODO:
         return `node-${this.payload.comment.id}`
     }
 
+    getParent(): InnerNode {
+        return this.parent
+    }
+
+    group(): void {
+        const minAngle = 0.5 // TODO
+        if (this.children.length > 1 && this.children[0].sector.sectorSize < minAngle) {
+            // this.children = [new NodeGroup(this)] // TODO
+        } else {
+            this.children.forEach(chile => {
+                chile.group()
+            })
+        }
+    }
+
     protected neighbours(): AbstractParentNode[] {
         return [this.parent, ...this.children]
     }
 }
 
-// class Group extends AbstractGroupNode implements OuterGroupNode {
-//     private readonly parent: InnerNode
-//
-//     constructor(private readonly nodes: MiddleGroupNode[]) {
-//         super(Group.avgSector(nodes))
-//         if (nodes.length < 2) throw new Error("") // TODO: make it logically impossible?
-//         // this.parent = nodes[0].
-//     }
-//
-//     asTree(): Tree {
-//
-//     }
-//
-//     private static avgSector(nodes: MiddleGroupNode[]): Sector {
-//         const angles = nodes.map(node => node.sector.angle)
-//         return new Sector(
-//             angles.reduce((a: number, b: number): number => a + b),
-//             0,
-//         )
-//     }
+class NodeGroup extends AbstractNode implements OuterNode {
+    private readonly nodes: Node[]
+
+    constructor(private readonly parent: Node) {
+        super(parent.sector.narrow())
+        if (parent.children.length < 2) throw new Error("") // TODO: make it logically impossible?
+        this.nodes = parent.children
+    }
+
+    asTree(): Tree {
+        this.ungroup()
+        return this.parent.asTree()
+    }
+
+    id(): string {
+        return `group-${this.parent.id()}`
+    }
+
+    getParent(): InnerNode {
+        return this.parent
+    }
+
+    absolutePosition(): Position {
+        return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
+    }
+
+    commentLevel(): number {
+        return this.parent.commentLevel() + 1
+    }
+
+    links(): Link[] { // TODO: remove?
+        return []
+    }
+
+    outerNodes(): OuterNode[] {
+        return this.parent.children // TODO: think about
+    }
+
+    render(): ReactElement { // TODO: move, and remove extension .tsx from the file
+        return (
+            <div className="comment-group">
+                {this.parent.children.length}
+            </div>
+        )
+    }
+
+    private ungroup(): void {
+        this.parent.children = this.nodes
+    }
+}
+// class RootGroup extends AbstractNode implements OuterNode {
 // }
 
 class Sector {
