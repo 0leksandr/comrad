@@ -62,7 +62,7 @@ export abstract class Sprout { // TODO: remove (move logic to Template)?
         return new Sector(this.childAngle(parentSector, childIndex, nrChildren), sectorSize)
     }
 
-    protected addTrunk(node: AbstractNode): SproutLeave[] { // TODO: rename
+    protected addTrunk(node: AbstractParentNode): SproutLeave[] { // TODO: rename
         const bastards: SproutLeave[] = []
         this.children.forEach(child => {
             if (child.isTrunk()) {
@@ -107,7 +107,7 @@ export class SproutRoot extends Sprout { // TODO: Sapling?
     }
 }
 class SproutLeave extends Sprout {
-    harden(node: AbstractNode): void { // TODO: rename. draw?
+    harden(node: AbstractParentNode): void { // TODO: rename. draw?
         if (this.isTrunk() && !this.payload.isRoot()) {
             const bastards = this.addTrunk(node)
             const angle = 1 / 3 // TODO: test other values
@@ -130,97 +130,11 @@ class SproutLeave extends Sprout {
     }
 }
 
-interface PositionedNodeInterface { // TODO: rename
+interface PositionedNode { // TODO: rename
     absolutePosition(): Position
 }
-
-abstract class DirectedNode implements PositionedNodeInterface { // TODO: rename
-    protected constructor(public readonly sector: Sector) {}
-
-    abstract absolutePosition(): Position
-
-    abstract collectNodes(): OuterGroupNode[] // TODO: visibleNodes
-}
-
-export abstract class AbstractNode extends DirectedNode { // TODO: InnerNode, HardNode?
-    children: Node[] = []
-
-    constructor(
-        public readonly payload: NodePayload,
-        sector: Sector,
-    ) {
-        super(sector)
-    }
-
-    protected abstract neighbours(): AbstractNode[]
-
-    add(leave: SproutLeave, sector: Sector): void {
-        this.children.push(new Node(this, leave.payload, sector))
-        leave.harden(this.children[this.children.length - 1])
-    }
-
-    collectNodes(): OuterGroupNode[] {
-        let nodes: OuterGroupNode[] = []
-        this.children.forEach(child => {
-            nodes = nodes.concat(child.collectNodes())
-        })
-        return nodes
-    }
-
-    joinTo(source: Sprout): void { // TODO: soften?
-        const added = source.add(this.payload)
-        this.neighbours().forEach(neighbour => {
-            if (!neighbour.payload.is(source.payload)) neighbour.joinTo(added)
-        })
-    }
-}
-
-class Root extends AbstractNode {
-    absolutePosition(): Position {
-        return new Position(0, 0)
-    }
-
-    group(): GroupRoot {
-        return new GroupRoot(this)
-    }
-
-    protected neighbours(): AbstractNode[] {
-        return this.children
-    }
-}
-
-class Node extends AbstractNode { // TODO: cache
-    constructor(
-        private readonly parent: AbstractNode,
-        payload: NodePayload,
-        sector: Sector,
-    ) {
-        super(payload, sector)
-    }
-
-    absolutePosition(): Position {
-        return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
-    }
-
-    collectNodes(): OuterGroupNode[] {
-        return [new MiddleGroupNode(this), ...super.collectNodes()]
-    }
-
-    asTree(): Tree { // TODO: move to Node
-        const root = new SproutRoot(this.payload)
-        this.neighbours().forEach(neighbour => {
-            neighbour.joinTo(root)
-        })
-        return root.asTree()
-    }
-
-    protected neighbours(): AbstractNode[] {
-        return [this.parent, ...this.children]
-    }
-}
-
-interface GroupNodeInterface extends PositionedNodeInterface {
-    style(): {} // TODO: new type?
+interface DisplayedNode extends PositionedNode {
+    style(): {}
 
     radius(): number
 
@@ -228,13 +142,22 @@ interface GroupNodeInterface extends PositionedNodeInterface {
 
     render(): ReactElement
 }
-interface InnerGroupNode extends GroupNodeInterface {}
-export interface OuterGroupNode extends GroupNodeInterface {
+interface InnerNode extends DisplayedNode {}
+export interface OuterNode extends DisplayedNode {
     asTree(): Tree
 
     id(): string
 }
-export abstract class AbstractGroupNode extends DirectedNode implements GroupNodeInterface {
+
+abstract class DirectedNode implements PositionedNode { // TODO: rename
+    protected constructor(public readonly sector: Sector) {}
+
+    abstract absolutePosition(): Position
+
+    abstract collectNodes(): OuterNode[] // TODO: visibleNodes, group
+}
+
+export abstract class AbstractDisplayedNode extends DirectedNode implements DisplayedNode {
     private readonly diameter = 100 // TODO: move to AbstractGroupNode (and rename to VisibleNode)
 
     abstract links(): Link[]
@@ -255,52 +178,120 @@ export abstract class AbstractGroupNode extends DirectedNode implements GroupNod
         }
     }
 }
-class GroupNodeDecorator<TNode extends AbstractNode> extends AbstractGroupNode implements InnerGroupNode {
-    constructor(protected readonly node: TNode) {
-        super(node.sector)
+
+export abstract class AbstractParentNode extends AbstractDisplayedNode implements InnerNode {
+    children: Node[] = []
+
+    constructor(
+        public readonly payload: NodePayload,
+        sector: Sector,
+    ) {
+        super(sector)
     }
 
-    absolutePosition(): Position {
-        return this.node.absolutePosition()
+    protected abstract neighbours(): AbstractParentNode[]
+
+    add(leave: SproutLeave, sector: Sector): void {
+        this.children.push(new Node(this, leave.payload, sector))
+        leave.harden(this.children[this.children.length - 1])
+    }
+
+    collectNodes(): OuterNode[] {
+        let nodes: OuterNode[] = []
+        this.children.forEach(child => {
+            nodes = nodes.concat(child.collectNodes())
+        })
+        return nodes
+    }
+
+    joinTo(source: Sprout): void { // TODO: soften?
+        const added = source.add(this.payload)
+        this.neighbours().forEach(neighbour => {
+            if (!neighbour.payload.is(source.payload)) neighbour.joinTo(added)
+        })
     }
 
     links(): Link[] {
         let links: Link[] = []
-        this.node.children.forEach(child => {
-            const decoratedChild = new MiddleGroupNode(child);
-            links.push(new Link(this, decoratedChild))
-            links = links.concat(decoratedChild.links())
+        this.children.forEach(child => {
+            links.push(new Link(this, child))
+            links = links.concat(child.links())
         })
         return links
     }
 
-    collectNodes(): OuterGroupNode[] {
-        return this.node.collectNodes()
+    render(): ReactElement { // TODO: remove?
+        return this.payload.comment.render()
     }
 
-    render(): ReactElement {
-        return this.node.payload.comment.render()
-    }
-
-    commentLevel(): number { // TODO: rename
-        return this.node.payload.commentLevel
+    commentLevel(): number { // TODO: remove?
+        return this.payload.commentLevel
     }
 }
-class GroupRoot extends GroupNodeDecorator<Root> {}
-class MiddleGroupNode extends GroupNodeDecorator<Node> implements OuterGroupNode {
-    asTree(): Tree {
-        return this.node.asTree()
+
+class Root extends AbstractParentNode implements InnerNode {
+    absolutePosition(): Position {
+        return new Position(0, 0)
+    }
+
+    protected neighbours(): AbstractParentNode[] {
+        return this.children
+    }
+}
+
+class Node extends AbstractParentNode implements InnerNode, OuterNode { // TODO: cache
+    constructor(
+        private readonly parent: AbstractParentNode,
+        payload: NodePayload,
+        sector: Sector,
+    ) {
+        super(payload, sector)
+    }
+
+    absolutePosition(): Position {
+        return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
+    }
+
+    collectNodes(): OuterNode[] {
+        return [this, ...super.collectNodes()]
+    }
+
+    asTree(): Tree { // TODO: move to Node
+        const root = new SproutRoot(this.payload)
+        this.neighbours().forEach(neighbour => {
+            neighbour.joinTo(root)
+        })
+        return root.asTree()
     }
 
     id(): string {
-        return `node-${this.node.payload.comment.id}`
+        return `node-${this.payload.comment.id}`
+    }
+
+    protected neighbours(): AbstractParentNode[] {
+        return [this.parent, ...this.children]
     }
 }
 
-// class Group extends Node {
-//     constructor(private readonly leaves: Node[]) {
-//         if (leaves.length < 2) throw new Error("")
-//         super()
+// class Group extends AbstractGroupNode implements OuterGroupNode {
+//     private readonly parent: InnerNode
+//
+//     constructor(private readonly nodes: MiddleGroupNode[]) {
+//         super(Group.avgSector(nodes))
+//         if (nodes.length < 2) throw new Error("") // TODO: make it logically impossible?
+//         // this.parent = nodes[0].
+//     }
+//
+//     asTree(): Tree {
+//
+//     }
+//
+//     private static avgSector(nodes: MiddleGroupNode[]): Sector {
+//         const angles = nodes.map(node => node.sector.angle)
+//         return new Sector(
+//             angles.reduce((a: number, b: number): number => a + b),
+//             0,
+//         )
 //     }
 // }
 
@@ -328,12 +319,10 @@ class Sector {
 }
 
 export class Tree { // TODO: remove?
-    public readonly root: GroupRoot
-    public readonly nodes: OuterGroupNode[]
+    public readonly nodes: OuterNode[]
     public readonly links: Link[]
 
-    constructor(root: Root) {
-        this.root = root.group()
+    constructor(public readonly root: Root) {
         this.nodes = this.root.collectNodes()
         this.links = this.root.links()
     }

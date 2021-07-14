@@ -1,11 +1,11 @@
 import React from "react";
 import {Element, Position} from "./General";
-import {AbstractGroupNode, OuterGroupNode} from "./Tree";
+import {AbstractDisplayedNode, OuterNode} from "./Tree";
 
 export class Link {
     constructor(
-        public readonly parent: AbstractGroupNode, // TODO: GroupNodeDecorator?
-        public readonly child: OuterGroupNode,
+        public readonly parent: AbstractDisplayedNode, // TODO: InnerNode?
+        public readonly child: OuterNode,
     ) {}
 }
 
