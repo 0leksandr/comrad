@@ -130,9 +130,7 @@ class SproutLeave extends Sprout {
     }
 }
 
-interface NodeInterface {
-    radius(): number
-
+export interface NodeInterface {
     commentLevel(): number
 
     outerNodes(): OuterNode[]
@@ -144,15 +142,16 @@ interface NodeInterface {
     is(payload: NodePayload): boolean
     soften(source: Sprout): void // TODO: grow?
     group(): void
-}
-export interface OuterNode extends NodeInterface {
-    asTree(): Tree
+
 
     style(): {}
 
-    id(): string
+    id(): string // TODO: key?
 
     render(): ReactElement
+}
+export interface OuterNode extends NodeInterface {
+    asTree(): Tree
 }
 
 export abstract class AbstractNode implements NodeInterface {
@@ -174,16 +173,22 @@ export abstract class AbstractNode implements NodeInterface {
 
     abstract group(): void
 
-    radius(): number {
-        return this.diameter / 2
-    }
+    abstract id(): string
+
+    abstract render(): ReactElement
 
     style(): {} {
         return {
             width: this.diameter,
             height: this.diameter,
             borderRadius: this.radius(),
+            left: -this.radius(),
+            top: -this.radius(),
         }
+    }
+
+    private radius(): number {
+        return this.diameter / 2
     }
 }
 
@@ -248,6 +253,10 @@ class Root extends InnerNode {
         this.children.forEach(child => { // TODO: group root itself
             child.group()
         })
+    }
+
+    id(): string {
+        return "root-node"
     }
 
     protected neighbours(): NodeInterface[] {

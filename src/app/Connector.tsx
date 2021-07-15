@@ -25,8 +25,8 @@ export class LineConnector extends Connector {
     }
 
     render(): React.ReactElement {
-        const from = this.link.parent.absolutePosition().moveDiagonal(this.link.parent.radius())
-        const to = this.link.child.absolutePosition().moveDiagonal(this.link.child.radius())
+        const from = this.link.parent.absolutePosition()
+        const to = this.link.child.absolutePosition()
         const topLeft = new Position(Math.min(from.x, to.x), Math.max(from.y, to.y))
         const lineFrom = from.subPosition(topLeft)
         const lineTo = to.subPosition(topLeft)

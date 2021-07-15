@@ -1,5 +1,5 @@
-import React, {FC, useState} from "react";
-import {Tree} from "./Tree";
+import React, {FC, ReactElement, useState} from "react";
+import {NodeInterface, Tree} from "./Tree";
 import {LineConnector} from "./Connector";
 import {motion} from "framer-motion";
 
@@ -10,36 +10,32 @@ interface ComRadProps {
 export const ComRadFC: FC<ComRadProps> = ({originalTree}) => {
     const [tree, setTree] = useState(originalTree)
 
+    const renderNode = (node: NodeInterface, onClick: () => void): ReactElement => {
+        return (
+            <motion.div style={{position: 'absolute'}}
+                        animate={node.absolutePosition().asStyle()}
+                        key={node.id()}>
+                <div className="node"
+                     style={node.style()}
+                     onClick={onClick}>
+                    <div className="comment-holder">
+                        <div className="comment">
+                            {node.render()}
+                        </div>
+                    </div>
+                </div>
+            </motion.div>
+        )
+    }
+
     return (
         <div className="tree">
             {tree.links.map(link => {
                 return new LineConnector(link).render()
             })}
-            <motion.div className="node" // TODO: do not duplicate
-                        key="root"
-                        style={tree.root.style()}
-                        animate={tree.root.absolutePosition().asStyle()}>
-                <div className="comment-holder">
-                    <div className="comment">
-                        {tree.root.payload.comment.render()}
-                    </div>
-                </div>
-            </motion.div>
+            {renderNode(tree.root, () => {})}
             {tree.nodes.map(node => {
-                return (
-                    <motion.div className="node"
-                                key={node.id()}
-                                style={node.style()}
-                                animate={node.absolutePosition().asStyle()}
-                                onClick={() => { setTree(node.asTree()) }}
-                    >
-                        <div className="comment-holder">
-                            <div className="comment">
-                                {node.render()}
-                            </div>
-                        </div>
-                    </motion.div>
-                )
+                return renderNode(node, () => { setTree(node.asTree()) })
             })}
         </div>
     )
