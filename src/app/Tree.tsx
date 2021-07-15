@@ -233,12 +233,6 @@ abstract class InnerNode extends AbstractNode {
         return this.payload.comment.render()
     }
 
-    add(leave: SproutLeave, sector: Sector): void {
-        const node = new Node(this, leave.payload, sector);
-        this.children.push(node)
-        leave.harden(node)
-    }
-
     links(): Link[] {
         let links: Link[] = []
         this.children.forEach(child => {
@@ -246,6 +240,12 @@ abstract class InnerNode extends AbstractNode {
             links = links.concat(child.links())
         })
         return links
+    }
+
+    add(leave: SproutLeave, sector: Sector): void {
+        const node = new Node(this, leave.payload, sector);
+        this.children.push(node)
+        leave.harden(node)
     }
 }
 
@@ -282,14 +282,6 @@ class Node extends InnerNode implements OuterNode { // TODO: cache
         return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
     }
 
-    asTree(): Tree { // TODO: move to Node
-        const root = new SproutRoot(this.payload)
-        this.neighbours().forEach(neighbour => {
-            neighbour.soften(root)
-        })
-        return root.asTree()
-    }
-
     key(): string {
         return `node-${this.payload.comment.id}`
     }
@@ -305,6 +297,14 @@ class Node extends InnerNode implements OuterNode { // TODO: cache
                 child.group()
             })
         }
+    }
+
+    asTree(): Tree { // TODO: move to Node
+        const root = new SproutRoot(this.payload)
+        this.neighbours().forEach(neighbour => {
+            neighbour.soften(root)
+        })
+        return root.asTree()
     }
 
     protected neighbours(): NodeInterface[] {
@@ -340,11 +340,6 @@ console.log("fix me?")
         return []
     }
 
-    asTree(): Tree {
-        this.ungroup()
-        return this.parent.asTree()
-    }
-
     key(): string {
         return `node-group-${this.nodes[0].key()}`
     }
@@ -371,13 +366,21 @@ console.log("fix me?")
 console.log("should not happen?")
     }
 
+    asTree(): Tree {
+        this.ungroup()
+        return this.parent.asTree()
+    }
+
     private ungroup(): void {
         this.parent.children = this.nodes
     }
 }
 
 class Sector {
-    constructor(public readonly angle: number, public readonly sectorSize: number) {}
+    constructor(
+        public readonly angle: number, // TODO: direction?
+        public readonly sectorSize: number, // TODO: width?
+    ) {}
 
     narrow(): Sector {
         return new Sector(this.angle, 0)
