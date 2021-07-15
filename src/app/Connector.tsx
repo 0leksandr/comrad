@@ -32,7 +32,7 @@ export class LineConnector extends Connector {
         const lineTo = to.subPosition(topLeft)
         return (
             <svg className="connector radial-connector"
-                 key={`connector-${this.link.child.id()}`}
+                 key={`connector-${this.link.child.key()}`}
                  width={Math.abs(from.x - to.x) + this.thickness}
                  height={Math.abs(from.y - to.y) + this.thickness}
                  style={topLeft.asStyle()}

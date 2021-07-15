@@ -14,7 +14,7 @@ export const ComRadFC: FC<ComRadProps> = ({originalTree}) => {
         return (
             <motion.div style={{position: 'absolute'}}
                         animate={node.absolutePosition().asStyle()}
-                        key={node.id()}>
+                        key={node.key()}>
                 <div className="node"
                      style={node.style()}
                      onClick={onClick}>

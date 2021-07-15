@@ -146,7 +146,7 @@ export interface NodeInterface {
 
     style(): {}
 
-    id(): string // TODO: key?
+    key(): string // TODO: key?
 
     render(): ReactElement
 }
@@ -173,7 +173,7 @@ export abstract class AbstractNode implements NodeInterface {
 
     abstract group(): void
 
-    abstract id(): string
+    abstract key(): string
 
     abstract render(): ReactElement
 
@@ -255,7 +255,7 @@ class Root extends InnerNode {
         })
     }
 
-    id(): string {
+    key(): string {
         return "root-node"
     }
 
@@ -285,7 +285,7 @@ class Node extends InnerNode implements OuterNode { // TODO: cache
         return root.asTree()
     }
 
-    id(): string {
+    key(): string {
         return `node-${this.payload.comment.id}`
     }
 
@@ -340,8 +340,8 @@ console.log("fix me?")
         return this.parent.asTree()
     }
 
-    id(): string {
-        return `node-group-${this.nodes[0].id()}`
+    key(): string {
+        return `node-group-${this.nodes[0].key()}`
     }
 
     render(): ReactElement { // TODO: move somewhere, and return extension .ts to the file
