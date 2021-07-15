@@ -134,13 +134,21 @@ interface NodeInterface {
     radius(): number
 
     commentLevel(): number
+
+    outerNodes(): OuterNode[]
+
+    absolutePosition(): Position
+
+    // TODO: maybe refactor
+    links(): Link[]
+    is(payload: NodePayload): boolean
+    soften(source: Sprout): void // TODO: grow?
+    group(): void
 }
 export interface OuterNode extends NodeInterface {
     asTree(): Tree
 
     style(): {}
-
-    absolutePosition(): Position
 
     id(): string
 
@@ -162,6 +170,10 @@ export abstract class AbstractNode implements NodeInterface {
 
     abstract commentLevel(): number
 
+    abstract links(): Link[]
+
+    abstract group(): void
+
     radius(): number {
         return this.diameter / 2
     }
@@ -176,13 +188,13 @@ export abstract class AbstractNode implements NodeInterface {
 }
 
 abstract class InnerNode extends AbstractNode {
-    children: Node[] = []
+    children: OuterNode[] = []
 
     constructor(public readonly payload: NodePayload, sector: Sector) {
         super(sector)
     }
 
-    protected abstract neighbours(): AbstractNode[]
+    protected abstract neighbours(): NodeInterface[]
 
     soften(source: Sprout): void {
         const added = source.add(this.payload)
@@ -212,8 +224,9 @@ abstract class InnerNode extends AbstractNode {
     }
 
     add(leave: SproutLeave, sector: Sector): void {
-        this.children.push(new Node(this, leave.payload, sector))
-        leave.harden(this.children[this.children.length - 1])
+        const node = new Node(this, leave.payload, sector);
+        this.children.push(node)
+        leave.harden(node)
     }
 
     links(): Link[] {
@@ -231,7 +244,13 @@ class Root extends InnerNode {
         return new Position(0, 0)
     }
 
-    protected neighbours(): AbstractNode[] {
+    group(): void {
+        this.children.forEach(child => { // TODO: group root itself
+            child.group()
+        })
+    }
+
+    protected neighbours(): NodeInterface[] {
         return this.children
     }
 }
@@ -261,28 +280,87 @@ class Node extends InnerNode implements OuterNode { // TODO: cache
         return `node-${this.payload.comment.id}`
     }
 
-    protected neighbours(): AbstractNode[] {
+    group(): void {
+        const minAngle = 1 / 4 // TODO
+        if ((this.children.length > 1) &&
+            (this.parent.sector.sectorSize / (this.children.length - 1) <= minAngle)
+        ) {
+            this.children = [new NodeGroup(this)] // TODO
+        } else {
+            this.children.forEach(child => {
+                child.group()
+            })
+        }
+    }
+
+    protected neighbours(): NodeInterface[] {
         return [this.parent, ...this.children]
     }
 }
 
-// class NodeGroup extends AbstractNode {
-//     private readonly nodes: Node[]
-//
-//     constructor(private readonly parent: Node) {
-//         super(parent.sector.narrow())
-//         if (parent.children.length < 2) throw new Error("NodeGroup should contain >1 nodes")
-//         this.nodes = parent.children
-//     }
-//
-//     absolutePosition(): Position {
-//         return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
-//     }
-//
-//     is(payload: NodePayload): boolean {
-//         return false // TODO: maybe refactor
-//     }
-// }
+class NodeGroup extends AbstractNode implements OuterNode {
+    private readonly nodes: OuterNode[] // TODO: maybe refactor and return Node[] ?
+
+    constructor(private readonly parent: Node) {
+        super(parent.sector.narrow())
+        if (parent.children.length < 2) throw new Error("NodeGroup should contain >1 nodes")
+        this.nodes = parent.children
+        parent.children = [this]
+    }
+
+    absolutePosition(): Position {
+        return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
+    }
+
+    is(payload: NodePayload): boolean {
+        return false // TODO: maybe refactor
+    }
+
+    commentLevel(): number {
+        return this.parent.commentLevel() + 1
+    }
+
+    outerNodes(): OuterNode[] {
+        // throw new Error("Fix me") // TODO: fix
+console.log("fix me?")
+        return []
+    }
+
+    asTree(): Tree {
+        this.ungroup()
+        return this.parent.asTree()
+    }
+
+    id(): string {
+        return `node-group-${this.nodes[0].id()}`
+    }
+
+    render(): ReactElement { // TODO: move somewhere, and return extension .ts to the file
+        return (
+            <div className="node-group">
+                {this.nodes.length}
+            </div>
+        )
+    }
+
+    links(): Link[] {
+        return [] // TODO: maybe refactor
+    }
+
+    soften(source: Sprout): void {
+        this.nodes.forEach(node => {
+            node.soften(source) // TODO: check
+        })
+    }
+
+    group(): void {
+console.log("should not happen?")
+    }
+
+    private ungroup(): void {
+        this.parent.children = this.nodes
+    }
+}
 
 class Sector {
     constructor(public readonly angle: number, public readonly sectorSize: number) {}
@@ -309,6 +387,7 @@ export class Tree {
     public readonly links: Link[]
 
     constructor(public readonly root: Root) {
+        root.group()
         this.links = root.links()
         this.nodes = root.outerNodes()
     }
