@@ -57,9 +57,10 @@ export abstract class Sprout { // TODO: remove (move logic to Template)?
         childIndex: number,
         nrChildren: number,
     ): Sector {
-        let sectorSize = parentSector.sectorSize / nrChildren
-        if (nrChildren === 2 && sectorSize > 1 / 2) sectorSize = 1 / 3
-        return new Sector(this.childAngle(parentSector, childIndex, nrChildren), sectorSize)
+        return new Sector(
+            this.childAngle(parentSector, childIndex, nrChildren),
+            parentSector.sectorSize / nrChildren,
+        )
     }
 
     protected addTrunk(node: InnerNode): SproutLeave[] { // TODO: rename
@@ -120,10 +121,14 @@ class SproutLeave extends Sprout {
                 })
             }
         } else {
+            let sector = node.sector
+            if (this.children.length === 2 && sector.sectorSize > 1 / 3) {
+                sector = new Sector(sector.angle, 1 / 3)
+            }
             this.children.forEach((child, index) => {
                 node.add(
                     child,
-                    this.childSector(node.sector, index, this.children.length),
+                    this.childSector(sector, index, this.children.length),
                 )
             })
         }
@@ -146,9 +151,9 @@ export interface NodeInterface {
 
     style(): {}
 
-    key(): string // TODO: key?
+    key(): string
 
-    render(): ReactElement
+    render(): ReactElement // TODO: renderContent?
 }
 export interface OuterNode extends NodeInterface {
     asTree(): Tree
