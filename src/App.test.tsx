@@ -1,7 +1,7 @@
 import React from 'react';
 import {fireEvent, render, screen} from '@testing-library/react';
 import App from './app/App';
-import {Position} from "./app/General";
+import {CartesianPosition} from "./app/General";
 
 function assertIsRound(element: Element): void {
   const styles = window.getComputedStyle(element);
@@ -12,18 +12,18 @@ function assertIsRound(element: Element): void {
   expect(style("width") / 2).toEqual(style('border-radius'))
 }
 
-function getCenterPosition(element: Element): Position {
+function getCenterPosition(element: Element): CartesianPosition {
   const styles = window.getComputedStyle(element);
   const style = (property: string): number => {
     return parseInt(styles.getPropertyValue(property))
   }
-  return new Position(
+  return new CartesianPosition(
       style("left") + style("width") / 2,
       -(style("top") + style("height") / 2)
   )
 }
 
-function getDistance(a: Position, b: Position): number {
+function getDistance(a: CartesianPosition, b: CartesianPosition): number {
   return Math.sqrt((a.x - b.x) ** 2 + (a.y - b.y) ** 2)
 }
 

@@ -2,8 +2,14 @@ import {ReactElement} from "react";
 
 export type Int = BigInt
 
-export class Position {
-    constructor(public x: number, public y: number) {}
+interface Position { // TODO: Coordinate?
+    asStyle(): {}
+}
+export class CartesianPosition implements Position {
+    constructor(
+        public readonly x: number,
+        public readonly y: number,
+    ) {}
 
     asStyle(): {left: number, top: number} {
         return {
@@ -12,16 +18,26 @@ export class Position {
         }
     }
 
-    addPosition(other: Position): Position {
-        return new Position(this.x + other.x, this.y + other.y)
+    add(other: CartesianPosition): CartesianPosition {
+        return new CartesianPosition(this.x + other.x, this.y + other.y)
     }
 
-    subPosition(other: Position): Position {
-        return new Position(this.x - other.x, this.y - other.y)
+    sub(other: CartesianPosition): CartesianPosition {
+        return new CartesianPosition(this.x - other.x, this.y - other.y)
     }
+}
+class PolarPosition implements Position {
+    constructor(
+        public readonly angle: number,
+        public readonly distance: number,
+    ) {}
 
-    moveDiagonal(nr: number): Position {
-        return new Position(this.x + nr, this.y - nr)
+    asStyle(): {top: number, height: number, transform: string} {
+        return {
+            top: -this.distance,
+            height: this.distance * 2,
+            transform: `rotate(${this.angle}turn)`,
+        }
     }
 }
 

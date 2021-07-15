@@ -1,5 +1,5 @@
 import React from "react";
-import {Element, Position} from "./General";
+import {Element, CartesianPosition} from "./General";
 import {AbstractNode, OuterNode} from "./Tree";
 
 export class Link {
@@ -27,9 +27,9 @@ export class LineConnector extends Connector {
     render(): React.ReactElement {
         const from = this.link.parent.absolutePosition()
         const to = this.link.child.absolutePosition()
-        const topLeft = new Position(Math.min(from.x, to.x), Math.max(from.y, to.y))
-        const lineFrom = from.subPosition(topLeft)
-        const lineTo = to.subPosition(topLeft)
+        const topLeft = new CartesianPosition(Math.min(from.x, to.x), Math.max(from.y, to.y))
+        const lineFrom = from.sub(topLeft)
+        const lineTo = to.sub(topLeft)
         return (
             <svg className="connector radial-connector"
                  key={`connector-${this.link.child.key()}`}

@@ -1,4 +1,4 @@
-import {Position} from "./General";
+import {CartesianPosition} from "./General";
 import {Comment} from "./Comment";
 import {Link} from "./Connector";
 import {ReactElement} from "react";
@@ -140,7 +140,7 @@ export interface NodeInterface {
 
     outerNodes(): OuterNode[]
 
-    absolutePosition(): Position
+    absolutePosition(): CartesianPosition
 
     // TODO: maybe refactor
     links(): Link[]
@@ -164,7 +164,7 @@ export abstract class AbstractNode implements NodeInterface {
 
     protected constructor(public readonly sector: Sector) {}
 
-    abstract absolutePosition(): Position
+    abstract absolutePosition(): CartesianPosition
 
     abstract soften(source: Sprout): void
 
@@ -250,8 +250,8 @@ abstract class InnerNode extends AbstractNode {
 }
 
 class Root extends InnerNode {
-    absolutePosition(): Position {
-        return new Position(0, 0)
+    absolutePosition(): CartesianPosition {
+        return new CartesianPosition(0, 0)
     }
 
     group(): void {
@@ -278,8 +278,8 @@ class Node extends InnerNode implements OuterNode { // TODO: cache
         super(payload, sector)
     }
 
-    absolutePosition(): Position {
-        return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
+    absolutePosition(): CartesianPosition {
+        return this.parent.absolutePosition().add(this.sector.relativePosition())
     }
 
     key(): string {
@@ -322,8 +322,8 @@ class NodeGroup extends AbstractNode implements OuterNode {
         parent.children = [this]
     }
 
-    absolutePosition(): Position {
-        return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
+    absolutePosition(): CartesianPosition {
+        return this.parent.absolutePosition().add(this.sector.relativePosition())
     }
 
     is(payload: NodePayload): boolean {
@@ -390,12 +390,12 @@ class Sector {
         return new Sector(this.angle + angle, this.sectorSize)
     }
 
-    relativePosition(): Position {
+    relativePosition(): CartesianPosition {
         const length = 150
         const angle = this.angle * 2 * Math.PI
         const x = length * Math.sin(angle)
         const y = length * Math.cos(angle)
-        return new Position(x, y)
+        return new CartesianPosition(x, y)
     }
 }
 
