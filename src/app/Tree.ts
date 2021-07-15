@@ -1,6 +1,7 @@
 import {Position} from "./General";
 import {Comment} from "./Comment";
 import {Link} from "./Connector";
+import {ReactElement} from "react";
 
 // TODO: remove unnecessary exports
 
@@ -61,7 +62,7 @@ export abstract class Sprout { // TODO: remove (move logic to Template)?
         return new Sector(this.childAngle(parentSector, childIndex, nrChildren), sectorSize)
     }
 
-    protected addTrunk(node: AbstractNode): SproutLeave[] { // TODO: rename
+    protected addTrunk(node: InnerNode): SproutLeave[] { // TODO: rename
         const bastards: SproutLeave[] = []
         this.children.forEach(child => {
             if (child.isTrunk()) {
@@ -106,7 +107,7 @@ export class SproutRoot extends Sprout { // TODO: Sapling?
     }
 }
 class SproutLeave extends Sprout {
-    harden(node: AbstractNode): void { // TODO: rename. draw?
+    harden(node: InnerNode): void { // TODO: rename. draw?
         if (this.isTrunk() && !this.payload.isRoot()) {
             const bastards = this.addTrunk(node)
             const angle = 1 / 3 // TODO: test other values
@@ -129,30 +130,90 @@ class SproutLeave extends Sprout {
     }
 }
 
-export abstract class AbstractNode {
-    private readonly diameter = 100
-    children: Node[] = []
+interface NodeInterface {
+    radius(): number
 
-    constructor(
-        public readonly payload: NodePayload,
-        public readonly sector: Sector,
-    ) {}
+    commentLevel(): number
+}
+export interface OuterNode extends NodeInterface {
+    asTree(): Tree
+
+    style(): {}
+
+    absolutePosition(): Position
+
+    id(): string
+
+    render(): ReactElement
+}
+
+export abstract class AbstractNode implements NodeInterface {
+    private readonly diameter = 100
+
+    protected constructor(public readonly sector: Sector) {}
 
     abstract absolutePosition(): Position
 
-    protected abstract neighbours(): AbstractNode[]
+    abstract soften(source: Sprout): void
 
-    add(leave: SproutLeave, sector: Sector): void {
-        this.children.push(new Node(this, leave.payload, sector))
-        leave.harden(this.children[this.children.length - 1])
-    }
+    abstract is(payload: NodePayload): boolean
+
+    abstract outerNodes(): OuterNode[]
+
+    abstract commentLevel(): number
 
     radius(): number {
         return this.diameter / 2
     }
 
-    walkNodes(fn: (node: Node) => void): void {
-        this.children.forEach(child => child.walkNodes(fn))
+    style(): {} {
+        return {
+            width: this.diameter,
+            height: this.diameter,
+            borderRadius: this.radius(),
+        }
+    }
+}
+
+abstract class InnerNode extends AbstractNode {
+    children: Node[] = []
+
+    constructor(public readonly payload: NodePayload, sector: Sector) {
+        super(sector)
+    }
+
+    protected abstract neighbours(): AbstractNode[]
+
+    soften(source: Sprout): void {
+        const added = source.add(this.payload)
+        this.neighbours().forEach(neighbour => {
+            if (!neighbour.is(source.payload)) neighbour.soften(added)
+        })
+    }
+
+    is(payload: NodePayload): boolean {
+        return this.payload === payload
+    }
+
+    outerNodes(): OuterNode[] {
+        let outerNodes: OuterNode[] = this.children
+        this.children.forEach(child => {
+            outerNodes = outerNodes.concat(child.outerNodes())
+        })
+        return outerNodes
+    }
+
+    commentLevel(): number {
+        return this.payload.commentLevel
+    }
+
+    render(): ReactElement {
+        return this.payload.comment.render()
+    }
+
+    add(leave: SproutLeave, sector: Sector): void {
+        this.children.push(new Node(this, leave.payload, sector))
+        leave.harden(this.children[this.children.length - 1])
     }
 
     links(): Link[] {
@@ -163,32 +224,9 @@ export abstract class AbstractNode {
         })
         return links
     }
-
-    style(): {} {
-        return {
-            width: this.diameter,
-            height: this.diameter,
-            borderRadius: this.radius(),
-        }
-    }
-
-    joinTo(source: Sprout): void {
-        const added = source.add(this.payload)
-        this.neighbours().forEach(neighbour => {
-            if (!neighbour.payload.is(source.payload)) neighbour.joinTo(added)
-        })
-    }
-
-    protected relativePosition(): Position {
-        const length = 150
-        const angle = this.sector.angle * 2 * Math.PI
-        const x = length * Math.sin(angle)
-        const y = length * Math.cos(angle)
-        return new Position(x, y)
-    }
 }
 
-class Root extends AbstractNode {
+class Root extends InnerNode {
     absolutePosition(): Position {
         return new Position(0, 0)
     }
@@ -196,13 +234,9 @@ class Root extends AbstractNode {
     protected neighbours(): AbstractNode[] {
         return this.children
     }
-
-    protected relativePosition(): Position {
-        return new Position(0, 0)
-    }
 }
 
-class Node extends AbstractNode { // TODO: cache
+class Node extends InnerNode implements OuterNode { // TODO: cache
     constructor(
         private readonly parent: AbstractNode,
         payload: NodePayload,
@@ -212,20 +246,19 @@ class Node extends AbstractNode { // TODO: cache
     }
 
     absolutePosition(): Position {
-        return this.parent.absolutePosition().addPosition(this.relativePosition())
-    }
-
-    walkNodes(fn: (node: Node) => void) {
-        fn(this)
-        super.walkNodes(fn)
+        return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
     }
 
     asTree(): Tree { // TODO: move to Node
         const root = new SproutRoot(this.payload)
         this.neighbours().forEach(neighbour => {
-            neighbour.joinTo(root)
+            neighbour.soften(root)
         })
         return root.asTree()
+    }
+
+    id(): string {
+        return `node-${this.payload.comment.id}`
     }
 
     protected neighbours(): AbstractNode[] {
@@ -233,10 +266,21 @@ class Node extends AbstractNode { // TODO: cache
     }
 }
 
-// class Group extends Node {
-//     constructor(private readonly leaves: Node[]) {
-//         if (leaves.length < 2) throw new Error("")
-//         super()
+// class NodeGroup extends AbstractNode {
+//     private readonly nodes: Node[]
+//
+//     constructor(private readonly parent: Node) {
+//         super(parent.sector.narrow())
+//         if (parent.children.length < 2) throw new Error("NodeGroup should contain >1 nodes")
+//         this.nodes = parent.children
+//     }
+//
+//     absolutePosition(): Position {
+//         return this.parent.absolutePosition().addPosition(this.sector.relativePosition())
+//     }
+//
+//     is(payload: NodePayload): boolean {
+//         return false // TODO: maybe refactor
 //     }
 // }
 
@@ -250,16 +294,22 @@ class Sector {
     add(angle: number): Sector {
         return new Sector(this.angle + angle, this.sectorSize)
     }
+
+    relativePosition(): Position {
+        const length = 150
+        const angle = this.angle * 2 * Math.PI
+        const x = length * Math.sin(angle)
+        const y = length * Math.cos(angle)
+        return new Position(x, y)
+    }
 }
 
 export class Tree {
-    public readonly nodes: Node[] = []
+    public readonly nodes: OuterNode[] = []
     public readonly links: Link[]
 
     constructor(public readonly root: Root) {
         this.links = root.links()
-        root.walkNodes((node: Node): void => {
-            this.nodes.push(node)
-        })
+        this.nodes = root.outerNodes()
     }
 }
