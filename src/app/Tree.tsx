@@ -2,6 +2,7 @@ import {CartesianPosition} from "./General";
 import {Comment} from "./Comment";
 import {Link} from "./Connector";
 import {ReactElement} from "react";
+import {Config} from "./Config";
 
 // TODO: remove unnecessary exports
 
@@ -80,10 +81,15 @@ export abstract class Sprout { // TODO: remove (move logic to Template)?
     }
 }
 export class SproutRoot extends Sprout { // TODO: Sapling?
+    constructor(payload: NodePayload, private readonly angle: number) { // TODO: separate type for angle
+        super(payload)
+    }
+
     asTree(): Tree {
-        const angle = 0.5
-        const sectorSize = this.payload.isRoot() ? 1 : 0.4 // TODO: test other values
-        const root = new Root(this.payload, new Sector(angle, sectorSize))
+        const sector = this.payload.isRoot() // TODO: separate type for Center?
+            ? new Sector(0.5, 1)
+            : new Sector(this.angle, 0.4) // TODO: test other values
+        const root = new Root(this.payload, sector)
         if (this.payload.isRoot()) {
             const sectorSize = 1
             this.children.forEach((child, index) => {
@@ -242,6 +248,10 @@ abstract class InnerNode extends AbstractNode {
         return links
     }
 
+    key(): string {
+        return `node-${this.payload.comment.id}`
+    }
+
     add(leave: SproutLeave, sector: Sector): void {
         const node = new Node(this, leave.payload, sector);
         this.children.push(node)
@@ -258,10 +268,6 @@ class Root extends InnerNode {
         this.children.forEach(child => { // TODO: group root itself
             child.group()
         })
-    }
-
-    key(): string {
-        return "root-node"
     }
 
     protected neighbours(): NodeInterface[] {
@@ -282,10 +288,6 @@ class Node extends InnerNode implements OuterNode { // TODO: cache
         return this.parent.absolutePosition().add(this.sector.relativePosition())
     }
 
-    key(): string {
-        return `node-${this.payload.comment.id}`
-    }
-
     group(): void {
         const minAngle = 1 / 4 // TODO
         if ((this.children.length > 1) &&
@@ -299,8 +301,11 @@ class Node extends InnerNode implements OuterNode { // TODO: cache
         }
     }
 
-    asTree(): Tree { // TODO: move to Node
-        const root = new SproutRoot(this.payload)
+    asTree(): Tree {
+        const angle = Config.get().direction() === Config.DIRECTION_INHERIT
+            ? this.sector.angle - 0.5
+            : 0
+        const root = new SproutRoot(this.payload, angle)
         this.neighbours().forEach(neighbour => {
             neighbour.soften(root)
         })

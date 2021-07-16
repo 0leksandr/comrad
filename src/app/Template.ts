@@ -19,7 +19,7 @@ export class TemplateComment {
 
 export class TemplateRoot extends TemplateComment {
     asTree(): Tree {
-        const root = new SproutRoot(new NodePayload(this.comment, 0))
+        const root = new SproutRoot(new NodePayload(this.comment, 0), 0)
         this.grow(root, 0)
         return root.asTree()
     }
