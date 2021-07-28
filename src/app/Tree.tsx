@@ -159,14 +159,16 @@ export interface NodeInterface {
 
     key(): string
 
-    render(): ReactElement // TODO: renderContent?
+    renderContent(): ReactElement
+
+    isRoot(): boolean
 }
 export interface OuterNode extends NodeInterface {
     asTree(): Tree
 }
 
 export abstract class AbstractNode implements NodeInterface {
-    private readonly diameter = 100
+    private readonly diameter = 50
 
     protected constructor(public readonly sector: Sector) {}
 
@@ -186,7 +188,9 @@ export abstract class AbstractNode implements NodeInterface {
 
     abstract key(): string
 
-    abstract render(): ReactElement
+    abstract renderContent(): ReactElement
+
+    abstract isRoot(): boolean
 
     style(): {} {
         return {
@@ -235,7 +239,7 @@ abstract class InnerNode extends AbstractNode {
         return this.payload.commentLevel
     }
 
-    render(): ReactElement {
+    renderContent(): ReactElement {
         return this.payload.comment.render()
     }
 
@@ -250,6 +254,10 @@ abstract class InnerNode extends AbstractNode {
 
     key(): string {
         return `node-${this.payload.comment.id}`
+    }
+
+    isRoot(): boolean {
+        return this.payload.isRoot()
     }
 
     add(leave: SproutLeave, sector: Sector): void {
@@ -349,7 +357,7 @@ console.log("fix me?")
         return `node-group-${this.nodes[0].key()}`
     }
 
-    render(): ReactElement { // TODO: move somewhere, and return extension .ts to the file
+    renderContent(): ReactElement { // TODO: move somewhere, and return extension .ts to the file
         return (
             <div className="node-group">
                 {this.nodes.length}
@@ -369,6 +377,10 @@ console.log("fix me?")
 
     group(): void {
 console.log("should not happen?")
+    }
+
+    isRoot(): boolean {
+        return false
     }
 
     asTree(): Tree {

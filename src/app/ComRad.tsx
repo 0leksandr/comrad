@@ -16,11 +16,11 @@ export const ComRadFC: FC<ComRadProps> = ({originalTree}) => {
                         animate={node.absolutePosition().asStyle()}
                         // transition={{duration: 2}}
                         key={node.key()}>
-                <div className="node"
+                <div className={`node ${node.isRoot() ? "root" : ""}`}
                      style={node.style()}
                      onClick={onClick}>
                     <div className="comment">
-                        {node.render()}
+                        {node.renderContent()}
                     </div>
                 </div>
             </motion.div>

@@ -10,4 +10,8 @@ export class Config {
         return Config.DIRECTION_INHERIT
         // return Config.DIRECTION_DOWN
     }
+
+    moveRoot(): boolean {
+        return true
+    }
 }
